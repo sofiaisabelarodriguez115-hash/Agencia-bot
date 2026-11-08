@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Mi Agencia de Noticias</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{--sky:#6b8cff;--night:#141a3d;--pix:'Press Start 2P',monospace;--txt:'VT323',monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:#000;color:#fff;font-family:var(--txt);font-size:20px}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  button{font-family:inherit}
+
+  .hud{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:10px;align-items:center;font-family:var(--pix);font-size:10px;padding:10px 6px 14px;text-transform:uppercase}
+  .hud div{line-height:1.9}
+  .hud b{display:block;font-weight:400;font-size:12px;color:#ffd60a}
+  .hud #cname{color:#fff;outline:none;cursor:text;text-transform:none;border-bottom:2px dashed transparent}
+  .hud #cname:focus,.hud #cname:hover{border-bottom-color:#666}
+  .simbtn{font-family:var(--pix);font-size:9px;background:#111;color:#52e07a;border:3px solid #52e07a;padding:10px;cursor:pointer;white-space:nowrap}
+  .simbtn.on{color:#ff5c5c;border-color:#ff5c5c}
+  @media(max-width:760px){.hud{grid-template-columns:repeat(2,1fr)}}
+  .blinkdot{animation:bl 1s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  .hint{font-size:18px;color:#aaa;margin:0 6px 8px}
+
+  /* escenario */
+  .stage-wrap{border:4px solid #fff;overflow-x:auto;overflow-y:hidden;background:#000}
+  .stage{position:relative;width:1000px;height:660px;margin:0 auto;overflow:hidden;background:var(--sky);transition:background 1s}
+  .stage.night{background:var(--night)}
+  .abs{position:absolute}
+  .stars{left:0;top:0;opacity:0;transition:opacity 1s}
+  .night .stars{opacity:1}
+  .cloud{animation:drift linear infinite}
+  @keyframes drift{from{transform:translateX(-140px)}to{transform:translateX(1100px)}}
+  .sign{left:330px;top:26px;background:#111;border:4px solid #fff;box-shadow:6px 6px 0 rgba(0,0,0,.35);padding:12px 18px;font-family:var(--pix);font-size:13px;white-space:nowrap;color:#ffd60a;max-width:340px;overflow:hidden;text-overflow:ellipsis}
+  .wall{left:0;top:100px;width:650px;height:340px;background:
+      linear-gradient(#4a3326 0 6px,transparent 6px),
+      repeating-conic-gradient(#d9c7a3 0 25%,#ccb78f 0 50%) 0 0/40px 40px}
+  .bwall{left:664px;top:100px;width:336px;height:340px;background:
+      linear-gradient(#4a2c4a 0 6px,transparent 6px),
+      repeating-linear-gradient(90deg,#efe0f5 0 18px,#e6d3ef 18px 36px)}
+  .partition{left:650px;top:100px;width:14px;height:340px;background:#3b2a1a;border-left:3px solid #5a4030;border-right:3px solid #2a1c10}
+  .floor{left:0;top:440px;width:1000px;height:220px;background:
+      repeating-linear-gradient(90deg,rgba(0,0,0,.07) 0 2px,transparent 2px 50px),
+      linear-gradient(#b98552,#a6733f)}
+  .bfloor{left:664px;top:440px;width:336px;height:150px;background:repeating-conic-gradient(#7b2d4f 0 25%,#8c3a5e 0 50%) 0 0/24px 24px;opacity:.55}
+  .ground{left:0;top:610px;width:1000px;height:50px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' shape-rendering='crispEdges'%3E%3Crect width='32' height='32' fill='%23c4622d'/%3E%3Crect width='32' height='3' fill='%235a2a0f'/%3E%3Crect y='16' width='32' height='3' fill='%235a2a0f'/%3E%3Crect width='3' height='16' fill='%235a2a0f'/%3E%3Crect x='16' y='16' width='3' height='16' fill='%235a2a0f'/%3E%3Crect x='3' y='3' width='13' height='2' fill='%23f0a070'/%3E%3Crect x='19' y='19' width='13' height='2' fill='%23f0a070'/%3E%3C/svg%3E");background-size:32px 32px}
+  .door{left:8px;top:350px;width:56px;height:120px;background:#6b4421;border:5px solid #3b2414;border-bottom:0}
+  .door::after{content:"";position:absolute;right:8px;top:56px;width:6px;height:6px;background:#ffd60a}
+  .door span{position:absolute;top:-24px;left:-6px;font-family:var(--pix);font-size:8px;background:#111;padding:3px 5px;border:2px solid #fff}
+  .bsign{left:690px;top:118px;background:#2a1430;border:4px solid #ffd60a;color:#ffd60a;font-family:var(--pix);font-size:10px;padding:8px 10px}
+  .bwin{left:880px;top:180px;width:96px;height:80px;background:linear-gradient(#9fd8ff,#e3f4ff);border:5px solid #fff}
+  .night .bwin{background:linear-gradient(#141a3d,#2a3570)}
+  .bwin::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(#0000 0 8px,rgba(255,255,255,.55) 8px 10px)}
+  .frame{left:700px;top:190px;width:70px;height:56px;background:#ffd60a;border:4px solid #8a6a10;font-size:30px;display:flex;align-items:center;justify-content:center}
+  .emoji{font-size:40px;line-height:1}
+  .clockw{left:575px;top:130px;width:56px;height:56px;border-radius:50%;background:#fff;border:5px solid #222}
+  .hand{position:absolute;left:50%;bottom:50%;width:3px;background:#222;transform-origin:bottom center}
+  .night .wall,.night .bwall,.night .floor,.night .partition{filter:brightness(.55) saturate(.8)}
+  .closed{left:110px;top:230px;width:440px;text-align:center;font-family:var(--pix);font-size:11px;line-height:1.8;color:#fff;background:rgba(0,0,0,.7);border:3px solid #fff;padding:12px;display:none;z-index:900}
+  .closed.show{display:block}
+
+  /* personajes */
+  .actor{position:absolute;width:88px;height:144px;cursor:pointer}
+  .actor canvas{width:88px;height:144px}
+  .actor .tag{position:absolute;top:146px;left:50%;transform:translateX(-50%);font-family:var(--pix);font-size:7px;background:#111;border:2px solid #fff;padding:3px 5px;white-space:nowrap}
+  .actor.seated .tag{display:none}
+  .bubble{position:absolute;left:50%;transform:translateX(-50%);background:#fff;color:#111;border:3px solid #111;box-shadow:3px 3px 0 rgba(0,0,0,.35);padding:4px 8px;font-size:18px;line-height:1;white-space:nowrap;display:none;z-index:2;max-width:none}
+  .bubble.show{display:block}
+  .bubble::after{content:"";position:absolute;bottom:-9px;left:50%;margin-left:-6px;width:10px;height:10px;background:#fff;border-right:3px solid #111;border-bottom:3px solid #111;transform:rotate(45deg)}
+  .bubble.jefa{background:#ffe3f0;border-color:#8c1c3a}
+  .bubble.jefa::after{background:#ffe3f0;border-color:#8c1c3a}
+  .desk{position:absolute}
+  .desk .dtag{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;font-family:var(--pix);font-size:7px;background:#111;border:2px solid #fff;padding:3px 5px;white-space:nowrap;cursor:pointer}
+  .desk .plate{position:absolute;left:50%;transform:translateX(-50%);top:58px;font-family:var(--pix);font-size:8px;color:#3a2a00;white-space:nowrap}
+  .chair{position:absolute;width:46px;height:52px;background:#3e4263;border:4px solid #2d3047;border-bottom:0}
+  .chair.boss{width:60px;height:66px;background:#8c1c3a;border-color:#5e1026}
+  .beam{position:absolute;width:120px;height:40px;background:linear-gradient(90deg,rgba(255,240,150,.5),rgba(255,240,150,0));clip-path:polygon(0 40%,100% 0,100% 100%,0 60%);top:84px;left:78px;display:none;pointer-events:none}
+  .night .beam{display:block}
+
+  /* paneles */
+  .panels{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:16px}
+  @media(max-width:760px){.panels{grid-template-columns:1fr}}
+  .box{border:4px solid #fff;padding:16px;background:#111}
+  .box h2{font-family:var(--pix);font-size:11px;margin:0 0 14px;color:#ffd60a;line-height:1.6}
+  .flow{display:flex;gap:6px;flex-wrap:wrap}
+  .step{flex:1;min-width:90px;border:3px solid #444;padding:8px 4px;text-align:center;font-size:18px;line-height:1}
+  .step span{display:block;font-size:24px;margin-bottom:4px}
+  .step.on{border-color:#ffd60a;background:#2a2410}
+  .job{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:2px dashed #333;font-size:20px;line-height:1}
+  .job:last-child{border:0}
+  .tagp{font-family:var(--pix);font-size:8px;padding:5px 7px;border:2px solid currentColor;white-space:nowrap}
+  .ok{color:#52e07a}.soon{color:#c48bff}
+  .muted{color:#aaa;font-size:19px;line-height:1.1}
+
+  /* periódico interactivo */
+  .paper{margin-top:16px;border:4px solid #fff;background:#111;padding:16px}
+  .paper-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:flex-end;margin-bottom:12px}
+  .paper-head h2{font-family:var(--pix);font-size:13px;color:#ffd60a;margin:0;line-height:1.6}
+  .paper-head .muted{font-size:18px}
+  .quick{border:3px dashed #ffd60a;padding:10px 12px;margin-bottom:14px}
+  .quick b{font-family:var(--pix);font-size:9px;color:#ffd60a;display:block;margin-bottom:6px}
+  .quick li{margin:3px 0;line-height:1.05}
+  .quick ul{margin:0;padding-left:20px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .tab{font-family:var(--pix);font-size:9px;background:#111;color:#fff;border:3px solid #555;padding:8px 10px;cursor:pointer}
+  .tab.on{border-color:#ffd60a;color:#ffd60a}
+  .progress{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:18px}
+  .bar{flex:1;height:14px;border:3px solid #fff;position:relative;max-width:300px}
+  .bar i{position:absolute;left:0;top:0;bottom:0;background:#52e07a;transition:width .3s}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .news{border:3px solid #fff;background:#1b1b1b;padding:12px;cursor:pointer;position:relative;transition:transform .1s}
+  .news:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 #ffd60a}
+  .news.read{opacity:.55}
+  .news .meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+  .chip{font-family:var(--pix);font-size:7px;padding:4px 6px;border:2px solid currentColor}
+  .chip.hn{color:#6ec1ff}.chip.int{color:#c48bff}.chip.cat{color:#ffb86b}
+  .news h3{margin:0 0 6px;font-size:22px;line-height:1;font-weight:400;color:#fff}
+  .news p{margin:0;font-size:18px;line-height:1.05;color:#ccc}
+  .news .more{display:none;margin-top:8px;border-top:2px dashed #444;padding-top:8px}
+  .news.open .more{display:block}
+  .news .why{color:#ffd60a}
+  .news a{color:#6ec1ff}
+  .news .foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:16px;color:#999;gap:6px}
+  .stamp{color:#c48bff}
+  .readbtn{font-family:var(--pix);font-size:7px;background:#111;color:#52e07a;border:2px solid #52e07a;padding:5px 6px;cursor:pointer}
+  .dato{margin-top:14px;border:3px solid #52e07a;padding:10px 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  .dato b{font-family:var(--pix);font-size:9px;color:#52e07a}
+  .dato .big{font-family:var(--pix);font-size:16px;color:#fff}
+  .quiz{margin-top:14px;border:3px solid #c48bff;padding:12px}
+  .quiz b{font-family:var(--pix);font-size:9px;color:#c48bff}
+  .quiz .q{font-size:21px;margin:10px 0 8px;line-height:1}
+  .opts{display:flex;flex-wrap:wrap;gap:6px}
+  .opt{font-family:var(--txt);font-size:19px;background:#111;color:#fff;border:3px solid #555;padding:4px 10px;cursor:pointer}
+  .opt.ok{border-color:#52e07a;color:#52e07a}.opt.bad{border-color:#ff5c5c;color:#ff5c5c}
+  .qfeed{margin-top:8px;font-size:18px;color:#ccc;min-height:20px;line-height:1.05}
+  .qnav{margin-top:8px;display:flex;gap:10px;align-items:center;font-size:18px}
+
+  .agenda{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px 16px}
+  .agenda li{font-size:20px;padding:4px 6px;border-left:4px solid #444;line-height:1}
+  .agenda li span{display:inline-block;width:86px;color:#aaa}
+  .agenda li.done{opacity:.45}
+  .agenda li.now{border-color:#52e07a;background:#10241a;color:#52e07a}
+  .agenda li.now span{color:#52e07a}
+  .agenda b{font-family:var(--pix);font-size:8px;font-weight:400}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:16px;z-index:2000}
+  .modal.show{display:flex}
+  .modal .box{max-width:440px;width:100%;position:relative}
+  .modal ul{padding-left:20px;margin:10px 0;line-height:1.05}
+  .close{position:absolute;top:10px;right:10px;background:#111;color:#fff;border:3px solid #fff;font-family:var(--pix);font-size:10px;padding:6px 8px;cursor:pointer}
+  .acts{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .act{font-family:var(--txt);font-size:21px;text-align:left;background:#111;color:#fff;border:3px solid #ffd60a;padding:6px 10px;cursor:pointer}
+  .act:hover{background:#2a2410}
+  .modal input{font-family:var(--txt);font-size:22px;width:100%;padding:6px;background:#000;color:#fff;border:3px solid #fff;margin-top:8px}
+
+  /* ===== Noticias: formato historias ===== */
+  .news2{--ink:#13233A;--paper:#F4F7FA;--caribe:#0B7F86;--mundo:#4C4FD1;--maiz:#F0C23B;--coral:#C93A47;--line:#D5DEE8;
+    margin-top:16px;background:var(--paper);color:var(--ink);border-radius:20px;padding:clamp(16px,3vw,28px);
+    font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:17px;line-height:1.5}
+  .news2 *{font-family:inherit}
+  .news2 [hidden]{display:none!important}
+  .news2 button{font:inherit;cursor:pointer}
+  .news2 :focus-visible{outline:3px solid var(--mundo);outline-offset:3px}
+  .n2-head{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:end;justify-content:space-between;margin-bottom:14px}
+  .n2-title{margin:0;font-size:clamp(30px,5vw,44px);font-weight:800;letter-spacing:-.025em;line-height:1;font-variation-settings:"opsz" 96}
+  .n2-date{margin:6px 0 0;color:#4A5B70;font-size:16px}
+  .n2-switch{display:inline-flex;background:#E3EAF2;border-radius:999px;padding:4px}
+  .n2-switch button{border:0;background:transparent;color:var(--ink);padding:8px 16px;border-radius:999px;font-weight:600;font-size:15px}
+  .n2-switch button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .n2-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+  .n2-filters button{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:6px 14px;font-size:15px;font-weight:500}
+  .n2-filters button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+  .n2-story{position:relative;max-width:720px;margin:0 auto;touch-action:pan-y}
+  .n2-bars{display:flex;gap:4px;margin-bottom:10px}
+  .n2-bars i{flex:1;height:4px;border-radius:2px;background:#D5DEE8;transition:background .2s}
+  .n2-bars i.done{background:var(--ink)}
+  .n2-card{position:relative;min-height:440px;border-radius:24px;padding:clamp(22px,4vw,40px);display:flex;flex-direction:column;gap:16px;
+    background:var(--ink);color:#fff;overflow:hidden;outline:none}
+  .n2-card.enter{animation:n2in .28s ease-out}
+  @keyframes n2in{from{opacity:.2;transform:translateX(var(--dx,24px))}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.n2-card.enter{animation:none}}
+  .n2-card.t-hn{background:var(--caribe)} .n2-card.t-int{background:var(--mundo)}
+  .n2-card.t-eco{background:var(--maiz);color:var(--ink)} .n2-card.t-seg{background:var(--coral)}
+  .n2-card.t-quiz{background:#fff;color:var(--ink);border:2px solid var(--line)}
+  .n2-card.solo .n2-h{font-size:clamp(34px,6.5vw,64px);margin-top:auto}
+  .n2-tags{display:flex;gap:8px;flex-wrap:wrap}
+  .n2-tags span{font-size:14px;font-weight:600;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
+  .t-eco .n2-tags span,.t-quiz .n2-tags span{background:rgba(19,35,58,.1)}
+  .n2-h{margin:0;font-weight:800;letter-spacing:-.025em;line-height:1.05;font-size:clamp(28px,5.2vw,48px);font-variation-settings:"opsz" 96;text-wrap:balance}
+  .n2-p{margin:0;font-size:clamp(17px,2.2vw,20px);max-width:58ch;opacity:.95}
+  .n2-why{margin:0;padding:12px 16px;border-left:4px solid currentColor;background:rgba(255,255,255,.12);border-radius:0 12px 12px 0;max-width:58ch}
+  .t-eco .n2-why{background:rgba(19,35,58,.07)}
+  .n2-why b{display:block;font-size:14px;margin-bottom:2px}
+  .n2-foot{margin-top:auto;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  .n2-by{display:flex;align-items:center;gap:10px;font-size:15px}
+  .n2-av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:#fff;color:var(--ink);font-size:15px}
+  .t-eco .n2-av{background:var(--ink);color:var(--maiz)}
+  .n2-src{color:inherit;font-weight:600;text-underline-offset:3px}
+  .n2-quick{margin:0;padding:0;list-style:none;display:grid;gap:14px;counter-reset:q}
+  .n2-quick li{font-size:clamp(19px,2.6vw,24px);line-height:1.3;font-weight:500;padding-left:44px;position:relative;counter-increment:q}
+  .n2-quick li::before{content:counter(q);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;font-size:15px;font-weight:800}
+  .n2-big{font-size:clamp(52px,11vw,104px);font-weight:800;letter-spacing:-.04em;line-height:.95;margin:auto 0 0;font-variation-settings:"opsz" 96}
+  .n2-hint{font-size:14px;opacity:.75;margin:0}
+  .n2-opts{display:grid;gap:10px}
+  .n2-opts button{text-align:left;padding:14px 16px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--ink);font-size:17px}
+  .n2-opts button:hover{border-color:var(--ink)}
+  .n2-opts button.ok{border-color:#1E8E5A;background:#E6F6EE}
+  .n2-opts button.bad{border-color:var(--coral);background:#FBE9EB}
+  .n2-btn{border:0;border-radius:999px;padding:10px 18px;font-weight:700;background:var(--ink);color:#fff}
+  .n2-ghost{border:1.5px solid currentColor;background:transparent;color:inherit;border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600}
+  .n2-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:#fff;color:var(--ink);
+    font-size:26px;line-height:1;box-shadow:0 2px 0 var(--line);display:grid;place-items:center;z-index:2}
+  .n2-nav.prev{left:-22px} .n2-nav.next{right:-22px}
+  .n2-nav:disabled{opacity:0;pointer-events:none}
+  @media(max-width:780px){.n2-nav.prev{left:6px}.n2-nav.next{right:6px}.n2-nav{top:auto;bottom:-56px;transform:none}.n2-story{margin-bottom:56px}}
+  .n2-count{text-align:center;color:#4A5B70;font-size:14px;margin:10px 0 0}
+  .n2-list{display:grid;gap:10px;max-width:820px;margin:0 auto}
+  .n2-row{display:grid;grid-template-columns:6px 1fr auto;gap:14px;align-items:start;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 16px 14px 0;overflow:hidden}
+  .n2-row .stripe{align-self:stretch;margin:-14px 0;background:var(--c)}
+  .n2-row h3{margin:2px 0 4px;font-size:20px;line-height:1.2;letter-spacing:-.01em}
+  .n2-row p{margin:0;color:#3A4A5E;font-size:16px}
+  .n2-row .meta{font-size:13px;color:#4A5B70;font-weight:600}
+  .n2-act{display:flex;flex-direction:column;gap:6px;align-items:end;font-size:14px}
+  .n2-row.read h3{color:#4A5B70}
+  .n2-row a{color:var(--ink);font-weight:600}
+  .n2-read{display:flex;align-items:center;gap:10px;justify-content:center;margin:18px 0 0;font-size:15px;color:#4A5B70}
+  .n2-meter{width:140px;height:6px;border-radius:3px;background:#D5DEE8;overflow:hidden}
+  .n2-meter i{display:block;height:100%;background:var(--caribe);transition:width .3s}
+  .n2-empty{color:inherit;font-size:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud">
+    <div>Empresa<b id="cname" contenteditable="true" spellcheck="false">Mi Agencia de Noticias</b></div>
+    <div>Hora HN<b id="time">--:--</b></div>
+    <div>Horario<b>7:00 – 4:00</b></div>
+    <div>Estado<b><span class="blinkdot">▶</span> <span id="status">--</span></b></div>
+    <button class="simbtn" id="simBtn">▶ SIMULAR UN DÍA</button>
+  </div>
+  <div class="hint">Toca a cualquier personaje (o a ti, Sofía, la jefa 👑) para darle órdenes.</div>
+
+  <div class="stage-wrap"><section class="stage" id="stage">
+    <canvas class="abs stars" id="stars" width="1000" height="100"></canvas>
+    <canvas class="abs" id="sun" width="60" height="60" style="right:40px;top:18px"></canvas>
+    <canvas class="abs cloud" id="c1" width="96" height="40" style="top:14px;animation-duration:40s"></canvas>
+    <canvas class="abs cloud" id="c2" width="96" height="40" style="top:56px;animation-duration:55s;animation-delay:-25s"></canvas>
+    <div class="abs sign" id="sign">Mi Agencia de Noticias</div>
+    <div class="abs wall"></div>
+    <div class="abs bwall"></div>
+    <div class="abs partition"></div>
+    <div class="abs floor"></div>
+    <div class="abs bfloor"></div>
+    <div class="abs ground"></div>
+    <div class="abs door"><span>ENTRADA</span></div>
+    <div class="abs clockw"><div class="hand" id="hh" style="height:14px"></div><div class="hand" id="mh" style="height:21px;width:2px"></div></div>
+    <div class="abs bsign" id="bsign">👑 OFICINA DE SOFÍA</div>
+    <div class="abs bwin"></div>
+    <div class="abs frame">🏆</div>
+    <div class="abs emoji" style="left:668px;top:398px">🪴</div>
+    <div class="abs emoji" style="left:955px;top:398px">🪴</div>
+    <div class="abs emoji" style="left:70px;top:398px;font-size:34px">🪴</div>
+    <canvas class="abs" id="cooler" width="40" height="80" style="left:585px;top:390px"></canvas>
+    <div class="abs closed" id="closed"></div>
+  </section></div>
+
+  <section class="news2" id="paper" aria-label="Noticias del día">
+    <header class="n2-head">
+      <div><h2 class="n2-title">Las noticias de hoy</h2><p class="n2-date" id="pDate"></p></div>
+      <div class="n2-switch" aria-label="Forma de ver las noticias">
+        <button type="button" data-v="story" aria-pressed="true">Historias</button>
+        <button type="button" data-v="list" aria-pressed="false">Ver todas</button>
+      </div>
+    </header>
+    <div class="n2-filters" id="tabs" aria-label="Filtrar noticias">
+      <button type="button" class="on" data-f="todo">Todo</button>
+      <button type="button" data-f="honduras">Honduras</button>
+      <button type="button" data-f="internacional">Mundo</button>
+      <button type="button" data-f="Economía">Economía</button>
+    </div>
+    <div class="n2-story" id="storyView">
+      <div class="n2-bars" id="bars" aria-hidden="true"></div>
+      <article class="n2-card" id="card" tabindex="0" aria-live="polite" aria-roledescription="historia"></article>
+      <button type="button" class="n2-nav prev" id="prev" aria-label="Historia anterior">‹</button>
+      <button type="button" class="n2-nav next" id="next" aria-label="Historia siguiente">›</button>
+      <p class="n2-count" id="count"></p>
+    </div>
+    <div class="n2-list" id="listView" hidden></div>
+    <p class="n2-read">Leídas <span id="readCount">0/0</span><span class="n2-meter"><i id="readBar" style="width:0"></i></span></p>
+  </section>
+
+
+  <section class="box" style="margin-top:16px">
+    <h2>🕐 Agenda de hoy (hora real de Honduras)</h2>
+    <div class="muted" id="nextAct" style="color:#ffd60a;margin-bottom:8px"></div>
+    <ul class="agenda" id="agenda"></ul>
+  </section>
+  <div class="panels">
+    <div class="box">
+      <h2>▶ Cómo trabaja tu equipo cada mañana</h2>
+      <div class="flow" id="flow">
+        <div class="step"><span>🔎</span>José Joel y Óscar buscan</div>
+        <div class="step"><span>💵</span>Erik saca el dato</div>
+        <div class="step"><span>🦇</span>Dari ordena y publica</div>
+        <div class="step"><span>📨</span>Amílcar lo publica 6:05 am</div>
+      </div>
+      <p class="muted">Todos los días a las 6:05 am (hora de Honduras) el equipo reúne los titulares más recientes de medios de Honduras y del mundo y actualiza esta página.</p>
+    </div>
+    <div class="box">
+      <h2>▶ Bots contratados</h2>
+      <div class="job"><div>Resumen diario de noticias<div class="muted">Honduras + Internacional · 6:05 am</div></div><span class="tagp ok">ACTIVO</span></div>
+      <div class="job"><div>Tu próximo bot<div class="muted">Próximamente</div></div><span class="tagp soon">VACANTE</span></div>
+    </div>
+  </div>
+</div>
+
+
+<footer class="news2" style="max-width:1100px;margin:16px auto;font-size:15px">
+  <h2 style="margin:0 0 8px;font-size:22px">Aviso legal y privacidad</h2>
+  <p><b>Contenido:</b> esta página es un proyecto creativo e independiente, ideado y desarrollado por Sofía Rodríguez. No es un medio de comunicación. Muestra solo titulares y enlaces que publican los propios medios en sus canales RSS públicos; cada noticia pertenece a su medio y para leerla completa hay que ir a su sitio. Las categorías se asignan de forma automática y pueden tener errores. Los personajes son ficticios.</p>
+  <p><b>Privacidad:</b> esta página no pide registro, no usa cookies de seguimiento ni publicidad y no recolecta datos personales. Las preferencias (nombre de la jefa, noticias leídas) se guardan solo en tu propio navegador.</p>
+  <p><b>Dato del dólar:</b> es un valor de referencia internacional (open.er-api.com). El tipo de cambio oficial lo publica el Banco Central de Honduras.</p>
+  <p style="margin-top:12px;text-align:center"><b>Creada y desarrollada por Sofía Rodríguez</b>, © 2026</p>
+</footer>
+<div class="modal" id="modal"><div class="box">
+  <button class="close" id="close">X</button>
+  <h2 id="mName"></h2><div class="muted" id="mRole"></div>
+  <div id="mBody"></div>
+  <div class="acts" id="mActs"></div>
+</div></div>
+
+<script id="news-data" type="application/json">
+{
+  "fecha": "Resumen de la semana · 1 al 7 de noviembre de 2026",
+  "rapido": [
+    "Los demócratas ganaron las dos cámaras del Congreso de EE. UU., algo que puede influir en migración y remesas para Honduras.",
+    "Honduras llegó a un acuerdo técnico con el FMI en la última revisión de su programa; podrían llegar unos $120 millones en diciembre.",
+    "Fuerte caída de las acciones tecnológicas en Wall Street: el Nasdaq entró en corrección."
+  ],
+  "noticias": [
+    {"seccion":"honduras","cat":"Economía","por":"Erik","titulo":"Honduras cierra su programa con el FMI","resumen":"El Gobierno y el FMI alcanzaron un acuerdo técnico en la sexta y última revisión del programa 2023-2026.","importa":"Si el Directorio del FMI lo aprueba a finales de diciembre, el país podría recibir unos $120 millones, y se abre la puerta a negociar un nuevo programa para 2027-2030.","fuente":"La Prensa","url":"https://www.laprensa.hn/economia/honduras-acuerdo-fmi-desembolso-120-millones-2026-BE32509769"},
+    {"seccion":"honduras","cat":"Economía","por":"Erik","titulo":"El lempira gana un poquito de terreno","resumen":"El dólar bajó varios días seguidos esta semana. El jueves 5 el BCH lo fijó en L26.9045 a la compra y L27.0390 a la venta.","importa":"Cuando el dólar sube, se encarecen los productos importados; esta semana el movimiento fue pequeño pero a la baja.","fuente":"El Heraldo","url":"https://www.elheraldo.hn/economia/dolar-asi-cotiza-este-jueves-5-noviembre-pais-GA32547199"},
+    {"seccion":"honduras","cat":"Economía","por":"Erik","titulo":"Remesas crecen 11.2% en el tercer trimestre","resumen":"Las remesas que reciben las familias hondureñas siguen subiendo y ya suman unos $10,098 millones según reportes del BCH citados por El Heraldo.","importa":"Las remesas son una de las principales fuentes de dólares del país y sostienen el consumo de muchas familias.","fuente":"El Heraldo","url":"https://www.elheraldo.hn/economia/cual-precio-dolar-honduras-para-este-miercoles-4-noviembre-MH32535595"},
+    {"seccion":"honduras","cat":"Economía","por":"Erik","titulo":"Combustibles: alivio esta semana, pero caros en el año","resumen":"Para la semana del 2 al 8 de noviembre algunas gasolinas bajaron hasta dos lempiras, aunque en lo que va del año diésel, gasolinas y keroseno acumulan alzas de L50 a L75 por galón en la capital.","importa":"El combustible afecta el precio del transporte y de casi todo lo que compramos.","fuente":"El Heraldo","url":"https://www.elheraldo.hn/honduras/aumento-combustible-gasolina-super-diesel-honduras-guerra-LH32530281"},
+    {"seccion":"honduras","cat":"Política","por":"José Joel","titulo":"Asfura en la Cumbre Iberoamericana de Madrid","resumen":"El presidente Nasry Asfura viajó a España para la XXX Cumbre Iberoamericana del 4 y 5 de noviembre; es el país número 12 que visita desde que fue electo.","importa":"Estas cumbres sirven para buscar cooperación e inversión con España y Latinoamérica.","fuente":"El Heraldo","url":"https://www.elheraldo.hn/honduras/nasry-asfura-viajara-espana-cumbre-iberoamericana-presidente-honduras-BE32502407"},
+    {"seccion":"internacional","cat":"Política","por":"Óscar","titulo":"Los demócratas toman el Congreso de EE. UU.","resumen":"En las elecciones de medio término del 3 de noviembre, los demócratas ganaron el control de la Cámara de Representantes y del Senado.","importa":"Un análisis de El Heraldo explica que el Congreso puede facilitar o frenar decisiones sobre migración, remesas, cooperación y comercio que afectan a Honduras.","fuente":"Teletica / El Heraldo","url":"https://www.teletica.com/internacional/tsunami-democrata-barre-ee-uu-y-le-arrebata-congreso-a-republicanos-de-donald-trump_420492"},
+    {"seccion":"internacional","cat":"Política","por":"Óscar","titulo":"Elecciones con varios récords históricos","resumen":"Abdul El-Sayed (Michigan) será el primer senador musulmán de EE. UU., y Keisha Lance Bottoms será la primera mujer negra gobernadora, en Georgia.","importa":"Muestra cambios en quiénes llegan a cargos de poder en EE. UU., incluido un fuerte voto joven y latino.","fuente":"CRHoy (AFP)","url":"https://crhoy.com/mundo/minorias-conquistan-espacios-de-poder-en-las-elecciones-de-ee-uu/"},
+    {"seccion":"internacional","cat":"Economía","por":"Erik","titulo":"Wall Street: se desploman las tecnológicas","resumen":"El jueves 5 el Nasdaq entró en corrección; Nvidia cayó más de 9%, en parte por temor a más regulación de centros de datos e inteligencia artificial con la nueva mayoría demócrata.","importa":"Las grandes caídas en la bolsa pueden afectar inversiones y el ánimo de la economía mundial.","fuente":"Bloomberg Línea","url":"https://www.bloomberglinea.com/mercados/estas-fueron-las-acciones-tecnologicas-responsables-del-desplome-del-nasdaq/"},
+    {"seccion":"internacional","cat":"Migración","por":"Óscar","titulo":"Migrantes buscan rutas peligrosas por el Pacífico","resumen":"El aumento de controles en la frontera de EE. UU. con México está llevando a algunos migrantes a cruzar por mar en el Pacífico, con grandes riesgos.","importa":"Muchos hondureños migran; estas rutas son muy peligrosas.","fuente":"Euronews","url":"https://es.euronews.com/2026/11/03"},
+    {"seccion":"internacional","cat":"Cultura","por":"Óscar","titulo":"Premio Cervantes 2026 para Cristina Fernández Cubas","resumen":"La escritora catalana, conocida por sus cuentos y literatura fantástica, ganó el premio más importante de las letras en español.","importa":"Es la séptima mujer en recibirlo.","fuente":"Euronews","url":"https://es.euronews.com/2026/11/03"}
+  ],
+  "dato": {"titulo":"DATO ÚTIL DEL DÍA","valor":"$1 = L27.0390","nota":"Precio de venta del dólar según el BCH (jueves 5 de noviembre)","url":"https://www.elheraldo.hn/economia/dolar-asi-cotiza-este-jueves-5-noviembre-pais-GA32547199"},
+  "quiz": [
+    {"q":"¿Qué partido ganó el Congreso de EE. UU. esta semana?","ops":["Republicano","Demócrata","Ninguno, hubo empate"],"ok":1,"exp":"Los demócratas ganaron la Cámara y el Senado."},
+    {"q":"¿Cuánto podría recibir Honduras del FMI si se aprueba la última revisión?","ops":["$12 millones","$120 millones","$1,200 millones"],"ok":1,"exp":"Unos $120 millones, si el Directorio lo aprueba en diciembre."},
+    {"q":"¿Cuánto crecieron las remesas en el tercer trimestre?","ops":["11.2%","2%","25%"],"ok":0,"exp":"Crecieron 11.2%."}
+  ]
+}
+</script>
+<script>
+// =====================================================================
+//  CONSTANTES
+// =====================================================================
+const S=4, GW=22, GH=36;          // sprites de 22x36 pixeles, escala 4
+const DESK_FEET=470, FRONT=548, RUN_Y=592, GUARD_Y=640;
+const DOOR_X=36, BOSS_SPOT=[712,FRONT];
+const stage=document.getElementById('stage');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const N = JSON.parse(document.getElementById('news-data').textContent);
+
+// =====================================================================
+//  RELOJ (real u hora simulada)
+// =====================================================================
+function hnNow(){ const n=new Date(); return new Date(n.getTime()+n.getTimezoneOffset()*60000-6*3600000); }
+let sim=null;  // minutos desde medianoche cuando se simula
+function clockHM(){ if(sim!==null){ const m=Math.floor(sim)%1440; return {h:Math.floor(m/60),m:m%60}; } const d=hnNow(); return {h:d.getHours(),m:d.getMinutes()}; }
+function clockStr(sec){ const {h,m}=clockHM(); const h12=((h+11)%12)+1; const ss = (sec && sim===null) ? ':'+String(hnNow().getSeconds()).padStart(2,'0') : ''; return `${h12}:${String(m).padStart(2,'0')}${ss} ${h<12?'a. m.':'p. m.'}`; }
+function nowMin(){ const {h,m}=clockHM(); return h*60+m; }
+function isLunch(){ return clockHM().h===12; }
+function isOpen(){ return isWork() && !isLunch(); }
+function fmtMin(t){ const h=Math.floor(t/60), m=t%60, h12=((h+11)%12)+1; return `${h12}:${String(m).padStart(2,'0')} ${h<12?'am':'pm'}`; }
+function fmtDur(m){ const h=Math.floor(m/60), mm=m%60; return h? `${h} h ${mm} min` : `${mm} min`; }
+function isWork(){ const {h}=clockHM(); return h>=7 && h<16; }
+function isNight(){ const {h}=clockHM(); return h>=18 || h<6; }
+
+// =====================================================================
+//  DIBUJO DE PERSONAJES (pixel art)
+// =====================================================================
+function drawPerson(cv,d,pose,f,carry){
+  const c=cv.getContext('2d'); c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height); c.setTransform(S,0,0,S,0,0);
+  const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+  const cx=11, legTop=GH-d.legH, tT=legTop-d.torsoH, hy=tT-9, hx=7, tw=d.torsoW, tx=cx-tw/2;
+  const walk=pose==='walk', st=f%2;
+  // piernas
+  const lw=d.broad?4:3, lift1=walk&&st?1:0, lift2=walk&&!st?1:0;
+  const l1=cx-lw-(walk&&st?1:0), l2=cx+(walk&&!st?1:0);
+  r(l1,legTop,lw,d.legH-1-lift1,d.pants); r(l2,legTop,lw,d.legH-1-lift2,d.pants);
+  r(l1-1,GH-1-lift1,lw+1,1,d.shoes||'#111'); r(l2,GH-1-lift2,lw+1,1,d.shoes||'#111');
+  if(d.skirt){ r(tx-1,legTop,tw+2,4,'#2a2238'); r(tx-1,legTop+3,tw+2,1,'#e8e0f0'); }
+  // torso
+  r(tx,tT,tw,d.torsoH,d.shirt); r(tx,tT+d.torsoH-1,tw,1,'rgba(0,0,0,.25)');
+  if(d.belly){ r(tx-1,tT+3,tw+2,d.torsoH-4,d.shirt); r(tx+1,tT+3,tw-2,1,'rgba(255,255,255,.18)'); r(cx,tT+6,1,1,'rgba(0,0,0,.35)'); }
+  if(d.outfit) d.outfit(r,{tx,tT,tw,th:d.torsoH,cx,legTop});
+  r(cx-1,tT-1,2,1,d.skin);
+  if(d.choker) r(cx-2,tT-1,4,1,'#16121d');
+  // brazos
+  const aw=d.broad?3:2, ah=d.torsoH-2, lx=tx-aw-(d.belly?1:0), rx=tx+tw+(d.belly?1:0), arm=d.arm||d.shirt;
+  if(pose==='stretch'||pose==='cheer'){
+    const up = pose==='cheer' ? st : 0;
+    r(lx,tT-6-up,aw,7,arm); r(lx,tT-7-up,aw,1,d.skin); r(rx,tT-6-up,aw,7,arm); r(rx,tT-7-up,aw,1,d.skin);
+  } else if(pose==='wave'){
+    r(lx,tT+1,aw,ah,arm); r(lx,tT+1+ah,aw,1,d.skin);
+    r(rx+(st?1:0),tT-6,aw,7,arm); r(rx+(st?1:0),tT-7,aw,1,d.skin);
+  } else if(pose==='sit' || carry){
+    const ty = pose==='sit' ? st : 0;
+    r(lx,tT+1,aw,ah-2,arm); r(rx,tT+1,aw,ah-2,arm);
+    r(lx+1,tT+ah-1-ty,3,1,d.skin); r(rx-2,tT+ah-2+ty,3,1,d.skin);
+  } else {
+    const sw = walk ? st : 0;
+    r(lx,tT+1+sw,aw,ah,arm); r(lx,tT+1+ah+sw,aw,1,d.skin);
+    r(rx,tT+1+(walk?1-sw:0),aw,ah,arm); r(rx,tT+1+ah+(walk?1-sw:0),aw,1,d.skin);
+  }
+  // objeto que carga
+  if(carry==='cafe'){ r(cx+1,tT+3,4,4,'#fff'); r(cx+1,tT+3,4,1,'#6b3e1f'); r(cx+5,tT+4,1,2,'#fff'); r(cx+2,tT+1-st,1,1,'#ddd'); }
+  if(carry==='papel'){ r(cx-3,tT+2,6,6,'#fff'); r(cx-2,tT+3,4,1,'#999'); r(cx-2,tT+5,3,1,'#999'); }
+  if(carry==='baleada'){ r(cx-3,tT+3,7,3,'#f2d38b'); r(cx-3,tT+4,7,1,'#c88a3a'); }
+  if(carry==='agua'){ r(cx+1,tT+3,3,4,'#bfe6ff'); r(cx+1,tT+5,3,2,'#6fbfff'); }
+  if(carry==='sobre'){ r(cx-3,tT+3,6,4,'#fff'); r(cx-3,tT+3,6,1,'#ddd'); r(cx-1,tT+4,2,1,'#e63946'); }
+  // cabeza
+  r(hx,hy,8,8,d.skin); r(hx-1,hy+1,1,6,d.skin); r(hx+8,hy+1,1,6,d.skin);
+  const blink = f%17===0;
+  if(d.eyes) d.eyes(r,hx,hy,blink);
+  else if(blink){ r(hx+2,hy+4,1,1,'#222'); r(hx+5,hy+4,1,1,'#222'); }
+  else { r(hx+2,hy+3,1,2,d.eye||'#222'); r(hx+5,hy+3,1,2,d.eye||'#222'); }
+  r(hx+1,hy+5,1,1,'rgba(255,120,150,.45)'); r(hx+6,hy+5,1,1,'rgba(255,120,150,.45)');
+  if(d.mouth) d.mouth(r,hx,hy,pose); else r(hx+3,hy+6,2,1,'#7a3020');
+  d.hair(r,hx,hy);
+  if(d.extra) d.extra(r,{hx,hy,tx,tT,tw,cx,rx,lx,f});
+}
+
+// ---------------- definición de cada personaje ----------------
+const DEF = {
+  jefa:{name:"SOFÍA", role:"Jefa de la empresa 👑", skin:"#a8714a", shirt:"#8c1c3a", pants:"#1b1b2f", shoes:"#000", legH:9, torsoH:9, torsoW:8, seatX:832, bubbleCls:'jefa',
+    hair(r,x,y){ const h="#24140c", l="#5a3a24";
+      r(x-3,y-3,14,4,h); r(x-4,y-1,3,10,h); r(x+9,y-1,3,10,h); r(x-3,y+9,2,2,h); r(x+9,y+9,2,2,h);
+      for(let i=0;i<7;i++){ r(x-3+i*2,y-4,1,1,h); }
+      for(let i=0;i<5;i++){ r(x-5,y+i*2,1,1,h); r(x+12,y+i*2,1,1,h); }
+      [[x-2,y-3],[x+1,y-2],[x+4,y-3],[x+7,y-2],[x+9,y-3],[x-3,y+1],[x-4,y+4],[x-3,y+7],[x+10,y+1],[x+11,y+4],[x+10,y+7]].forEach(([a,b])=>r(a,b,1,1,l));
+      r(x,y+1,2,1,h); r(x+3,y+1,2,1,h); r(x+6,y+1,2,1,h); },
+    eyes(r,x,y,b){ if(b){ r(x+1,y+4,2,1,"#2a1408"); r(x+5,y+4,2,1,"#2a1408"); return; }
+      r(x+1,y+3,2,2,"#2a1408"); r(x+1,y+3,1,1,"#fff"); r(x+5,y+3,2,2,"#2a1408"); r(x+5,y+3,1,1,"#fff"); r(x,y+3,1,1,"#24140c"); r(x+7,y+3,1,1,"#24140c"); },
+    mouth(r,x,y){ r(x+1,y+5,1,1,"#7a3020"); r(x+6,y+5,1,1,"#7a3020"); r(x+2,y+5,4,1,"#c0605a"); r(x+2,y+6,4,1,"#fff"); r(x+3,y+7,2,1,"#c0605a"); },
+    outfit(r,o){ r(o.cx-1,o.tT,2,4,"#fff"); r(o.cx-2,o.tT,1,2,"#fff"); r(o.cx+1,o.tT,1,2,"#fff"); r(o.tx+1,o.tT,1,5,"#6e1530"); r(o.tx+o.tw-2,o.tT,1,5,"#6e1530"); r(o.cx-1,o.tT+4,2,1,"#ffd60a"); },
+    extra(r,o){ r(o.hx-1,o.hy+6,1,2,"#ffd60a"); r(o.hx+8,o.hy+6,1,2,"#ffd60a"); },
+    hello:"¡Buenos días, equipo! ☀️", bye:"¡Hasta mañana, equipo! 💜",
+    tasks:["Dirige la empresa 👑","Recibe los reportes del equipo","Decide qué se publica cada mañana"]},
+  jose:{name:"JOSÉ JOEL LÓPEZ", role:"Reportero Nacional 🇭🇳", skin:"#b5794a", shirt:"#2f6fe0", pants:"#2b2d42", legH:8, torsoH:8, torsoW:8, seatX:120, accent:"#2f6fe0",
+    hair(r,x,y){ const h="#2a1a10", l="#55361f";
+      r(x,y-2,8,3,h); r(x-1,y-1,10,2,h); r(x-1,y+1,1,2,h); r(x+8,y+1,1,2,h);
+      [[x+1,y-3],[x+3,y-3],[x+5,y-3],[x+7,y-3],[x-2,y],[x+9,y]].forEach(([a,b])=>r(a,b,1,1,h));
+      [[x+2,y-2],[x+4,y-2],[x+6,y-2],[x,y-1],[x+3,y-1],[x+7,y-1],[x+5,y]].forEach(([a,b])=>r(a,b,1,1,l)); },
+    msgs:["Revisando La Prensa y El Heraldo…","¿Qué pasó hoy en Honduras?","Noticias de educación 📚","Anotando lo de San Pedro Sula","Llamando a una fuente ☎️"],
+    hello:"¡Buenos días, jefa Sofía! ☀️", bye:"¡Hasta mañana, jefa Sofía! 👋",
+    report:()=>`Jefa, lo de Honduras: ${(N.noticias.find(n=>n.seccion==='honduras'&&n.cat!=='Economía')||N.noticias[0]).titulo} 📰`,
+    tasks:["Busca las noticias más importantes de Honduras","Política, seguridad, educación y clima","Revisa medios hondureños confiables"]},
+  oscar:{name:"ÓSCAR GARCÍA", role:"Corresponsal Internacional 🌎", skin:"#f7d9c8", shirt:"#1fa35a", pants:"#3a3a4a", legH:11, torsoH:9, torsoW:8, seatX:250, accent:"#1fa35a",
+    hair(r,x,y){ const h="#111"; r(x,y-1,8,2,h); r(x+1,y-2,1,1,h); r(x+4,y-2,1,1,h); r(x+6,y-2,1,1,h); r(x-1,y,1,2,h); r(x+8,y,1,2,h); },
+    mouth(r,x,y){ r(x+3,y+5,2,1,"#c0605a"); r(x+3,y+6,2,1,"#fff"); },
+    msgs:["¿Qué pasa en el mundo hoy?","Noticias de EE. UU. y migración","¿Algo nuevo en Centroamérica?","Leyendo de tecnología 🤖","Comparando varias fuentes"],
+    hello:"¡Buenos días! Traigo las noticias del mundo 🌎", bye:"¡Nos vemos mañana! 🌎",
+    report:()=>`Jefa, en el mundo: ${(N.noticias.find(n=>n.seccion==='internacional')||N.noticias[0]).titulo} 🌎`,
+    tasks:["Encuentra las noticias más importantes del mundo","Pone atención a lo que afecta a Honduras","Ciencia, tecnología y geopolítica"]},
+  erik:{name:"ERIK SALGADO", role:"Analista de Economía 💵", skin:"#d9a27a", shirt:"#e8772e", pants:"#3b3f5c", legH:12, torsoH:11, torsoW:10, belly:true, seatX:380, accent:"#e8772e",
+    hair(r,x,y){ const h="#3a2a1e"; r(x,y-1,8,2,h); r(x-1,y,1,3,h); r(x+8,y,1,3,h); r(x+5,y+1,2,1,h); },
+    msgs:["Calculando el dólar vs. lempira 🧮","¿Cuánto está el diésel hoy? ⛽","Remesas: revisando cifras del BCH","Preparando el dato útil del día","Esto merece una baleada 😋"],
+    hello:"¡Buen día! Ya desayuné… dos baleadas 😅", bye:"Me voy a cenar… ¡hasta mañana! 🌯",
+    report:()=>`Jefa, el dato del día: ${N.dato.valor} 💵`,
+    tasks:["Sigue el tipo de cambio del BCH","Revisa precios de combustibles y remesas","Prepara el \"Dato útil del día\""]},
+  helen:{name:"DARI FLORES", role:"Verificadora y Editora 🦇", skin:"#f6e7ee", shirt:"#1c1626", pants:"#1c1626", shoes:"#000", legH:10, torsoH:9, torsoW:8, skirt:true, choker:true, seatX:510, accent:"#c48bff", screen:"#2a1438", goth:true,
+    hair(r,x,y){ const h="#16121d";
+      r(x-1,y-2,10,3,h); r(x-2,y+1,3,7,h); r(x+7,y+1,3,7,h); r(x,y+1,8,2,h);
+      r(x+1,y+3,1,1,h); r(x+4,y+3,1,1,h); r(x+6,y+3,1,1,h);
+      r(x+6,y-3,1,1,"#9b4dca"); r(x+8,y-3,1,1,"#9b4dca"); r(x+7,y-3,1,1,"#5c1f6e"); r(x+6,y-2,3,1,"#9b4dca"); },
+    eyes(r,x,y,b){ if(b){ r(x+1,y+5,2,1,"#16121d"); r(x+5,y+5,2,1,"#16121d"); }
+      else { r(x+1,y+4,2,2,"#7b2d8e"); r(x+1,y+4,1,1,"#fff"); r(x+5,y+4,2,2,"#7b2d8e"); r(x+5,y+4,1,1,"#fff"); }
+      r(x,y+4,1,1,"#16121d"); r(x+7,y+4,1,1,"#16121d"); },
+    mouth(r,x,y){ r(x+3,y+6,2,1,"#c06a9a"); },
+    outfit(r,o){ r(o.tx+1,o.tT,2,1,"#fff"); r(o.tx+o.tw-3,o.tT,2,1,"#fff"); r(o.cx-1,o.tT+2,2,4,"#9b4dca"); r(o.cx-2,o.tT+3,4,1,"#9b4dca"); },
+    msgs:["Esto huele a rumor… fuera 🥀","Solo la verdad sobrevive 🖤","Cazando noticias falsas 🦇","¿Dos fuentes dicen lo mismo? ✔","Redactando el resumen ✍️"],
+    hello:"Buenos días… si es que hay sol 🖤", bye:"Adiós… la noche me llama 🦇🌙",
+    report:()=>"Jefa Sofía, verifiqué todas las noticias de hoy ✔🦇",
+    tasks:["Revisa que cada noticia venga de fuentes confiables","Descarta rumores y noticias falsas","Redacta el resumen final claro y neutral"]},
+  amilcar:{name:"AMÍLCAR LARIOS", role:"Encargado de los mandados 📨", skin:"#ffe1cc", shirt:"#e63946", pants:"#3a5a9b", legH:10, torsoH:9, torsoW:8, eye:"#3b6fb6", runner:true,
+    hair(r,x,y){ const h="#d9a441"; r(x,y-2,8,3,h); r(x-1,y-1,1,3,h); r(x+8,y-1,1,2,h); r(x+1,y+1,3,1,h); r(x+2,y-3,4,1,h); },
+    outfit(r,o){ r(o.tx-3,o.tT+1,2,6,"#7a4b2a"); r(o.tx-3,o.tT+1,2,1,"#9c6a3e"); },
+    hello:"¡Buenos días! ¿Qué mandado hay hoy? 🏃", bye:"Último mandado: ¡irme a casa! 🏃",
+    tasks:["Hace todos los mandados de la oficina","Lleva el resumen hasta tu celular cada mañana","Trae el café (y las baleadas) al equipo"]},
+  selvin:{name:"SELVIN", role:"Jefe de Seguridad 🛡️", skin:"#8d5524", shirt:"#1d3557", pants:"#14213d", legH:13, torsoH:11, torsoW:12, broad:true, guard:true,
+    hair(r,x,y){ r(x-1,y-3,10,3,"#1d3557"); r(x+3,y-2,2,1,"#ffd60a"); r(x-2,y,12,1,"#14213d"); },
+    eyes(r,x,y,b){ r(x+1,y+2,2,1,"#2a1305"); r(x+5,y+2,2,1,"#2a1305"); if(b){ r(x+2,y+4,1,1,"#111"); r(x+5,y+4,1,1,"#111"); } else { r(x+2,y+3,1,2,"#111"); r(x+5,y+3,1,2,"#111"); } },
+    mouth(r,x,y){ r(x+2,y+6,4,1,"#5a2d0c"); },
+    outfit(r,o){ r(o.tx,o.tT,o.tw,1,"#2b4a75"); r(o.cx-2,o.tT,4,2,"#a8c5ff"); r(o.tx+o.tw-4,o.tT+2,3,3,"#ffd60a"); r(o.tx,o.tT+o.th-2,o.tw,1,"#111"); r(o.cx-1,o.tT+o.th-2,2,1,"#ffd60a"); },
+    extra(r,o){ if(isNight()||!isWork()){ r(o.rx,o.tT+8,3,3,"#777"); r(o.rx+2,o.tT+8,1,3,"#fff4a3"); } },
+    tasks:["Patrulla la oficina día y noche","Cuida que no entren noticias falsas ni sitios peligrosos","Te da consejos de seguridad 🔐"]}
+};
+
+// =====================================================================
+//  ESCRITORIOS Y DECORACIÓN
+// =====================================================================
+function drawDesk(cv,d,f,on){
+  const c=cv.getContext('2d'); c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height); c.setTransform(S,0,0,S,0,0);
+  const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+  const wood = d.goth? ["#4a2f4d","#6b4470","#36223a"] : ["#8b5a2b","#b07a43","#6d4421"];
+  r(20,0,9,7,"#1b1b2f"); r(21,1,7,5,on?(d.screen||"#bfefff"):"#333a4d");
+  if(on){ r(22,2,1+f%5,1,d.accent); r(22,4,4,1,"#7a869a"); }
+  r(23,7,3,2,"#1b1b2f");
+  r(0,9,30,2,wood[0]); r(0,9,30,1,wood[1]); r(1,11,28,15,wood[0]); r(1,11,28,1,"rgba(0,0,0,.3)");
+  r(3,15,9,1,wood[2]); r(3,20,9,1,wood[2]); r(7,17,2,1,"#d9c08a"); r(7,22,2,1,"#d9c08a"); r(16,14,11,10,wood[2]); r(17,15,9,8,wood[0]);
+  r(10,8,8,1,"#9aa5b8");
+  if(d.goth){ r(3,4,2,5,"#efe6d0"); if(on){ r(3+(f%2),2,1,2,"#ffb703"); } r(7,7,1,2,"#7a1f2b"); r(6,6,2,1,"#b0273d"); }
+  else { r(3,6,3,3,"#fff"); r(3,6,3,1,"#6b3e1f"); r(6,7,1,1,"#fff"); if(on) r(4,4-(f%2),1,1,"#e6e6e6"); }
+  if(d.belly){ r(14,7,5,2,"#f2d38b"); r(14,8,5,1,"#c88a3a"); }
+}
+function drawBossDesk(cv,f,on){
+  const c=cv.getContext('2d'); c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height); c.setTransform(S,0,0,S,0,0);
+  const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+  r(4,4,3,5,"#7fb3d5"); r(3,1,1,1,"#ff6b9a"); r(5,0,1,1,"#ffd60a"); r(6,2,1,1,"#ff6b9a"); r(4,2,1,2,"#2bb673"); r(6,3,1,1,"#2bb673");
+  r(33,3,11,6,"#2b2d42"); r(34,4,9,4,on?"#ffd6ec":"#333a4d"); if(on) r(35,5,1+f%6,1,"#8c1c3a"); r(31,8,15,1,"#9aa5b8");
+  r(45,4,4,3,"#ffd60a"); r(46,7,2,1,"#c9a227"); r(45,8,4,1,"#c9a227");
+  r(0,9,50,2,"#4a2c2a"); r(0,9,50,1,"#6e4440"); r(1,11,48,15,"#5a3330"); r(1,12,48,1,"#c9a227");
+  r(17,14,16,5,"#ffd60a"); r(17,14,16,1,"#fff3b0");
+}
+function drawCooler(){ const c=document.getElementById('cooler').getContext('2d'); const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x*4,y*4,w*4,h*4)};
+  r(2,0,6,7,"#9fd3ff"); r(3,1,2,5,"#d6efff"); r(1,7,8,12,"#e8e8e8"); r(1,7,8,1,"#fff"); r(3,10,1,2,"#3a86ff"); r(6,10,1,2,"#e63946"); r(2,13,6,1,"#bbb"); r(1,19,8,1,"#999"); }
+drawCooler();
+
+// cielo
+function cloud(cv){ const c=cv.getContext('2d'); const r=(x,y,w,h)=>{c.fillStyle="#fff";c.fillRect(x*4,y*4,w*4,h*4)}; r(6,2,6,2); r(4,4,14,3); r(2,6,20,3); r(0,9,24,1); }
+["c1","c2"].forEach(id=>cloud(document.getElementById(id)));
+(function stars(){ const c=document.getElementById('stars').getContext('2d'); for(let i=0;i<70;i++){ c.fillStyle=Math.random()<.2?"#ffd60a":"#fff"; const s=Math.random()<.2?4:2; c.fillRect(Math.random()*1000|0,Math.random()*96|0,s,s);} })();
+function sun(night){ const c=document.getElementById('sun').getContext('2d'); c.clearRect(0,0,60,60);
+  const col=night?"#f4f1c9":"#ffd60a"; const r=(x,y,w,h,cc=col)=>{c.fillStyle=cc;c.fillRect(x*5,y*5,w*5,h*5)};
+  r(4,1,4,1); r(2,2,8,1); r(1,3,10,6); r(2,9,8,1); r(4,10,4,1);
+  if(night){ r(6,1,4,1,"#141a3d"); r(7,2,4,7,"#141a3d"); r(6,9,4,2,"#141a3d"); } }
+
+// =====================================================================
+//  MOTOR DE PERSONAJES
+// =====================================================================
+const actors={};
+const deskEls={};
+function addDesk(key,d){
+  const w=document.createElement('div'); w.className='desk'; w.style.left=(d.seatX+10-60)+'px'; w.style.top=(DESK_FEET-104)+'px'; w.style.zIndex=460;
+  const cv=document.createElement('canvas'); cv.width=120; cv.height=104; cv.style.width='120px'; cv.style.height='104px'; w.appendChild(cv);
+  const t=document.createElement('div'); t.className='dtag'; t.textContent=d.name; w.appendChild(t);
+  t.onclick=()=>openMenu(key);
+  const ch=document.createElement('div'); ch.className='chair'; ch.style.left=(d.seatX-23)+'px'; ch.style.top=(DESK_FEET-104+4)+'px'; ch.style.zIndex=300;
+  stage.appendChild(ch); stage.appendChild(w); deskEls[key]={cv,d};
+}
+function addBossDesk(){
+  const w=document.createElement('div'); w.className='desk'; w.style.left='740px'; w.style.top=(DESK_FEET-104)+'px'; w.style.zIndex=460;
+  const cv=document.createElement('canvas'); cv.width=200; cv.height=104; cv.style.width='200px'; cv.style.height='104px'; w.appendChild(cv);
+  const p=document.createElement('div'); p.className='plate'; p.id='plate'; p.textContent='👑 JEFA'; w.appendChild(p);
+  const ch=document.createElement('div'); ch.className='chair boss'; ch.style.left='802px'; ch.style.top=(DESK_FEET-118)+'px'; ch.style.zIndex=300;
+  stage.appendChild(ch); stage.appendChild(w); deskEls.boss={cv,boss:true};
+}
+
+function makeActor(key){
+  const d=DEF[key];
+  const el=document.createElement('div'); el.className='actor';
+  const cv=document.createElement('canvas'); cv.width=GW*S; cv.height=GH*S;
+  const b=document.createElement('div'); b.className='bubble '+(d.bubbleCls||'');
+  const legTop=GH-d.legH, hy=legTop-d.torsoH-9;
+  b.style.bottom=(GH*S-(hy-4)*S)+'px';
+  const tag=document.createElement('div'); tag.className='tag'; tag.textContent=d.name.split(' ')[0];
+  el.appendChild(b); el.appendChild(cv); el.appendChild(tag);
+  if(d.guard){ const bm=document.createElement('div'); bm.className='beam'; el.appendChild(bm); }
+  el.onclick=e=>{ e.stopPropagation(); openMenu(key); };
+  stage.appendChild(el);
+  const a={key,d,el,cv,b,tag,x:DOOR_X,y:FRONT,seated:false,present:false,busy:false,leaving:false,pose:'stand',carry:null,path:[],cb:null,speed:d.runner?150:(d.guard?70:95),bt:null,legTop};
+  a.say=(text,ms=3200)=>{ b.textContent=text; b.classList.add('show'); clearTimeout(a.bt); a.bt=setTimeout(()=>b.classList.remove('show'),ms); };
+  a.go=pts=>new Promise(res=>{ a.seated=false; a.path=pts.map(p=>[p[0],p[1]]); a.cb=res; });
+  a.show=v=>{ el.style.display=v?'block':'none'; };
+  actors[key]=a; return a;
+}
+function place(a){
+  let top, z;
+  if(a.seated){ top = DESK_FEET-104+36+12 - a.legTop*S; z=400; a.el.classList.add('seated'); }
+  else { top = a.y - GH*S; z=Math.round(a.y); a.el.classList.remove('seated'); }
+  a.el.style.left=(a.x-GW*S/2)+'px'; a.el.style.top=top+'px'; a.el.style.zIndex=z;
+}
+
+let last=performance.now();
+function step(t){
+  const dt=Math.min(.05,(t-last)/1000); last=t;
+  for(const a of Object.values(actors)){
+    if(a.path.length){
+      const [tx,ty]=a.path[0], dx=tx-a.x, dy=ty-a.y, dist=Math.hypot(dx,dy), mv=a.speed*dt;
+      if(dist<=mv){ a.x=tx; a.y=ty; a.path.shift(); if(!a.path.length){ a.pose= a.pose==='walk'?'stand':a.pose; const cb=a.cb; a.cb=null; cb&&cb(); } }
+      else { a.x+=dx/dist*mv; a.y+=dy/dist*mv; a.pose='walk'; }
+    }
+    place(a);
+  }
+  requestAnimationFrame(step);
+}
+
+let F=0;
+setInterval(()=>{
+  F++;
+  for(const a of Object.values(actors)){ if(a.present) drawPerson(a.cv,a.d,a.seated?'sit':a.pose,F,a.carry); }
+  for(const [k,o] of Object.entries(deskEls)){
+    const on = o.boss ? actors.jefa.present && actors.jefa.seated : actors[k] && actors[k].present && actors[k].seated;
+    if(o.boss) drawBossDesk(o.cv,F,on); else drawDesk(o.cv,o.d,F,on);
+  }
+},200);
+
+// ---------------- acciones básicas ----------------
+async function standUp(a){ if(!a.seated) return; a.seated=false; a.y=DESK_FEET+14; await a.go([[a.x,FRONT]]); }
+async function sitDown(a){ await a.go([[a.d.seatX,FRONT]]); a.seated=true; a.pose='sit'; a.carry=null; }
+async function goBack(a){ if(a.d.seatX) { await a.go([[a.x,FRONT],[a.d.seatX,FRONT]]); await sitDown(a); } }
+const WORKERS=['jose','oscar','erik','helen'];
+const free=k=>actors[k].present && !actors[k].busy && !actors[k].leaving;
+
+async function arrive(a,msg){
+  a.busy=true; a.present=true; a.show(true); a.x=DOOR_X; a.y=DESK_FEET+6; a.seated=false; a.pose='stand';
+  a.say(msg||a.d.hello,3500);
+  if(a.d.runner){ await a.go([[DOOR_X,RUN_Y]]); }
+  else { await a.go([[DOOR_X,FRONT],[a.d.seatX,FRONT]]); await sitDown(a); }
+  a.busy=false;
+}
+async function leave(a,msg){
+  a.leaving=true;
+  while(a.busy) await sleep(400);
+  a.busy=true; a.say(msg||a.d.bye,3500);
+  if(a.seated){ await standUp(a); }
+  a.pose='wave'; await sleep(1500); a.pose='stand';
+  await a.go([[a.x,a.d.runner?RUN_Y:FRONT],[DOOR_X,a.d.runner?RUN_Y:FRONT],[DOOR_X,DESK_FEET+6]]);
+  a.show(false); a.present=false; a.busy=false; a.leaving=false; a.carry=null;
+}
+function setInstant(a,present){
+  a.present=present; a.show(present); a.path=[]; a.busy=false; a.leaving=false; a.carry=null;
+  if(present){ if(a.d.runner){ a.seated=false; a.x=200+Math.random()*500; a.y=RUN_Y; } else { a.seated=true; a.x=a.d.seatX; a.y=FRONT; } }
+}
+
+// ---------------- eventos ----------------
+const REPLIES=["¡Excelente trabajo! 😊","¡Gracias! Sigan así 💜","¡Perfecto! 👏","Me encanta, gracias 😄","¡Así se hace! 🌟","Anotado, gracias ✍️"];
+const CHATS=[["¿Viste lo del dólar? 💵","¡Sí! Erik ya lo anotó"],["¿Almorzamos baleadas? 🌯","¡Va! A la una"],["¿Me ayudas con esta nota? 📰","Claro, déjame ver"],["Dari dice que eso era rumor 🦇","Uff, menos mal que revisó"],["¿Ya viste el periódico de hoy?","¡Quedó bonito! 😄"],["La jefa está contenta hoy 😊","¡Es que vamos muy bien!"],["¿Tienes un lapicero? ✏️","Toma, aquí tienes"],["¡Qué calor hace hoy! 🥵","Ya Amílcar fue por agua"],["¿Cómo va tu nota?","¡Ya casi la termino! 💪"],["¿Viste el partido ayer? ⚽","¡Qué partidazo!"]];
+
+async function reportToBoss(a,line){
+  const j=actors.jefa; if(!j.present) return;
+  a.busy=true; await standUp(a); a.carry= a.key==='erik'?null:'papel';
+  await a.go([[a.x,FRONT],BOSS_SPOT]);
+  a.say(line||a.d.report(),3800); await sleep(1700);
+  j.say(pick(REPLIES),3000); await sleep(2300);
+  a.pose='wave'; await sleep(700); a.pose='stand'; a.carry=null;
+  await goBack(a); a.busy=false;
+}
+async function chat(a,b){
+  a.busy=true; const [l1,l2]=pick(CHATS);
+  await standUp(a); await a.go([[a.x,FRONT],[b.d.seatX+48,FRONT]]);
+  a.say(l1,3000); await sleep(1600); b.say(l2,3000); await sleep(2200);
+  await goBack(a); a.busy=false;
+}
+async function stretch(a){
+  a.busy=true; await standUp(a); a.pose='stretch'; a.say(pick(["¡A estirarse! 🙆","Uff, la espalda… 😅","Pausa activa 💪"]),2600); await sleep(2600);
+  a.pose='stand'; await sitDown(a); a.busy=false;
+}
+async function water(a){
+  a.busy=true; await standUp(a); await a.go([[a.x,FRONT],[605,FRONT]]); a.say("Voy por agua 💧",2200); await sleep(1500);
+  a.carry='agua'; await goBack(a); a.busy=false;
+}
+async function bossTour(){
+  const j=actors.jefa; const list=WORKERS.filter(free); if(!list.length||j.busy) return;
+  const w=actors[pick(list)]; j.busy=true; w.busy=true;
+  await standUp(j); await j.go([[j.x,FRONT],[w.d.seatX+50,FRONT]]);
+  j.say(`¿Cómo va todo, ${nice(w.key)}? 😊`,3000); await sleep(1700);
+  w.say(pick(["¡Todo bien, jefa! 💪","¡Avanzando, jefa! 🚀","¡Ya casi termino! ✍️"]),3000); w.busy=false; await sleep(1800);
+  await goBack(j); j.busy=false;
+}
+async function amilcarCoffee(target){
+  const a=actors.amilcar; if(!free('amilcar')) return; a.busy=true;
+  const t = target||actors.jefa; const isBoss=t.key==='jefa';
+  a.say("Voy por café ☕",2000); await a.go([[605,RUN_Y],[605,FRONT]]); await sleep(900); a.carry='cafe';
+  const spot = isBoss? BOSS_SPOT : [t.d.seatX+48,FRONT];
+  await a.go([spot]); a.say(isBoss?"Su cafecito, jefa Sofía ☕":`Su café, ${nice(t.key)} ☕`,3000);
+  await sleep(1600); t.say(isBoss?"¡Gracias, Amílcar! 😊":"¡Gracias, Amílcar! ☕",2600); a.carry=null; await sleep(1200);
+  await a.go([[a.x,RUN_Y]]); a.busy=false;
+}
+async function amilcarBaleadas(all){
+  const a=actors.amilcar; if(!free('amilcar')) return; a.busy=true;
+  a.say(all?"¡Voy por baleadas para todos! 🌯":"Voy por unas baleadas 🌯",2500); await a.go([[DOOR_X,RUN_Y],[DOOR_X,DESK_FEET+6]]);
+  a.show(false); await sleep(5000); a.show(true); a.carry='baleada';
+  await a.go([[DOOR_X,FRONT]]);
+  if(all){
+    a.say("¡Llegaron las baleadas! 🌯🌯🌯",3000);
+    for(const k of [...WORKERS,'jefa']){ const t=actors[k]; if(!t.present) continue; const sp = k==='jefa'?BOSS_SPOT:[t.d.seatX+48,FRONT]; await a.go([sp]); t.say(pick(["¡Gracias! 😋","¡Qué rico! 🌯","¡Usted es un crack! 🙌"]),2200); await sleep(700); }
+  } else {
+    await a.go([[actors.erik.d.seatX+48,FRONT]]); a.say("Le traje sus baleadas, Erik 🌯",2800); await sleep(1500); actors.erik.say("¡Usted es un crack! 😋",2600); await sleep(1200);
+  }
+  a.carry=null; await a.go([[a.x,RUN_Y]]); a.busy=false;
+}
+async function amilcarBank(){
+  const a=actors.amilcar; if(!free('amilcar')) return; a.busy=true;
+  a.say("¡Voy al banco! 🏦",2500); await a.go([[DOOR_X,RUN_Y],[DOOR_X,DESK_FEET+6]]); a.show(false); await sleep(6000);
+  a.show(true); a.carry='sobre'; a.say("¡Ya volví! 🏃",2500); await a.go([[DOOR_X,RUN_Y]]); a.carry=null; a.busy=false;
+}
+async function selvinVisit(){
+  const s=actors.selvin; if(s.busy || !actors.jefa.present) return; s.busy=true;
+  await s.go([[s.x,GUARD_Y],[BOSS_SPOT[0]+10,FRONT+20]]); s.say(pick(["Jefa, todo en orden 👮","Jefa, la oficina está segura 🛡️","Reporte: cero novedades, jefa ✅"]),3200);
+  await sleep(1800); actors.jefa.say(pick(["¡Gracias, Selvin! 💪","¡Qué tranquilidad! 😊"]),2600); await sleep(1500);
+  await s.go([[s.x,GUARD_Y]]); s.busy=false;
+}
+async function meeting(){
+  const j=actors.jefa; if(!j.present) return;
+  const team=[...WORKERS,'amilcar','selvin'].filter(k=>actors[k].present);
+  for(const k of team){ while(actors[k].busy) await sleep(300); actors[k].busy=true; }
+  j.busy=true; j.say("¡Reunión de equipo! 📋",3000);
+  const spots=[[690,FRONT+10],[750,FRONT+30],[815,FRONT+40],[880,FRONT+30],[945,FRONT+10],[720,GUARD_Y-10]];
+  await Promise.all(team.map(async(k,i)=>{ const a=actors[k]; if(a.seated) await standUp(a); await a.go([[a.x,a.d.guard?GUARD_Y:FRONT],spots[i]]); }));
+  for(const k of team){ const a=actors[k]; a.say(a.d.report?a.d.report():(a.d.guard?"La oficina está segura 🛡️":"¡Todos los mandados listos! 📨"),3000); await sleep(2300); }
+  j.say("¡Excelente trabajo, equipo! 🎉",3000);
+  team.forEach(k=>{ actors[k].pose='cheer'; actors[k].say("🎉",2200); }); await sleep(2400);
+  await Promise.all(team.map(async k=>{ const a=actors[k]; a.pose='stand';
+    if(a.d.guard) await a.go([[a.x,GUARD_Y]]); else if(a.d.runner) await a.go([[a.x,RUN_Y]]); else await goBack(a); a.busy=false; }));
+  j.busy=false;
+}
+
+// ---------------- agenda del día (hora real) ----------------
+async function coffeeRound(){ actors.jefa.say("¡Hora del cafecito! ☕",3000); WORKERS.forEach((k,i)=>setTimeout(()=>{ if(actors[k].present) actors[k].say(pick(["¡Sí, café! ☕","¡Lo necesitaba! 😅","☕☕☕"]),2500); },900+i*400)); await sleep(1500); amilcarCoffee(); }
+function stretchAll(){ actors.jefa.say("¡Pausa activa, equipo! 🙆",3000); WORKERS.filter(free).forEach((k,i)=>setTimeout(()=>stretch(actors[k]),i*500)); }
+function tidy(){ actors.jefa.say("¡Ya casi es hora de irnos! ⏰",3000); WORKERS.forEach((k,i)=>setTimeout(()=>{ if(actors[k].present) actors[k].say(pick(["Ordenando el escritorio 🧹","Guardando mis notas 🗂️","Apagando la compu 💻"]),2800); },800+i*500)); }
+const AGENDA=[
+  {t:7*60,    ico:"☀️", label:"Llegada del equipo"},
+  {t:7*60+30, ico:"📋", label:"Reunión de la mañana", fn:()=>meeting()},
+  {t:9*60,    ico:"☕", label:"Cafecito", fn:()=>coffeeRound()},
+  {t:10*60+30,ico:"🙆", label:"Pausa activa", fn:()=>stretchAll()},
+  {t:12*60,   ico:"🍽️", label:"Almuerzo (salen a comer)"},
+  {t:13*60,   ico:"😋", label:"Regreso del almuerzo"},
+  {t:14*60,   ico:"📰", label:"Revisión de noticias con la jefa", fn:()=>meeting()},
+  {t:15*60,   ico:"🌯", label:"Merienda: baleadas para todos", fn:()=>amilcarBaleadas(true)},
+  {t:15*60+45,ico:"🧹", label:"Ordenar escritorios", fn:()=>tidy()},
+  {t:16*60,   ico:"👋", label:"Salida (hasta mañana)"}
+];
+function crossed(a,b,t){ return b>=a ? (t>a && t<=b) : (t>a || t<=b); }
+function renderAgenda(cur){
+  const ul=document.getElementById('agenda'); if(!ul) return;
+  const inDay = cur>=7*60 && cur<16*60;
+  let nowIdx=-1; AGENDA.forEach((e,i)=>{ if(inDay && e.t<=cur) nowIdx=i; });
+  ul.innerHTML=AGENDA.map((e,i)=>`<li class="${i===nowIdx?'now':(inDay&&e.t<cur?'done':'')}"><span>${fmtMin(e.t)}</span>${e.ico} ${e.label}${i===nowIdx?' <b>← AHORA</b>':''}</li>`).join('');
+  const next=AGENDA.find(e=>e.t>cur) || AGENDA[0];
+  const left=(next.t-cur+1440)%1440;
+  document.getElementById('nextAct').textContent=`Siguiente: ${next.ico} ${next.label} a las ${fmtMin(next.t)} (en ${fmtDur(left)})`;
+}
+
+async function randomEvent(){
+  if(!isOpen()) return;
+  const avail=WORKERS.filter(free);
+  const r=Math.random();
+  if(r<.25 && avail.length) return reportToBoss(actors[pick(avail)]);
+  if(r<.42 && avail.length>=2){ const a=pick(avail); const b=pick(avail.filter(k=>k!==a)); return chat(actors[a],actors[b]); }
+  if(r<.52 && avail.length) return stretch(actors[pick(avail)]);
+  if(r<.62 && avail.length) return water(actors[pick(avail)]);
+  if(r<.72) return amilcarCoffee();
+  if(r<.78) return amilcarBaleadas(false);
+  if(r<.83) return amilcarBank();
+  if(r<.91) return bossTour();
+  return selvinVisit();
+}
+
+// =====================================================================
+//  SELVIN: generador de frases (miles de combinaciones)
+// =====================================================================
+const SAL=["Jefa","Señora jefa","Jefecita","Mi jefa","Buenas, jefa","Con permiso, jefa","Jefa, reporto que","Atención, jefa","Jefa, le informo que","Ey, jefa"];
+const EST=["todo tranquilo por aquí","no hay novedad en el pasillo","la puerta está bien cerrada","no hay nadie sospechoso","el parqueo está en orden","las cámaras funcionan perfecto","la oficina está segura","las ventanas están bien","el perímetro está despejado","ningún rumor pasó la puerta","todo el equipo está en su puesto","la recepción está en calma","hay paz en la oficina","las alarmas están activas","ni una mosca se mueve","el wifi está protegido","la bodega está con llave","no hay noticias falsas a la vista","la entrada está vigilada","todo está bajo control"];
+const ACC=["Revisando","Vigilando","Patrullando","Inspeccionando","Asegurando","Echándole un ojo a","Cuidando","Recorriendo","Supervisando","Verificando","Custodiando","Chequeando","Resguardando","Monitoreando","Protegiendo"];
+const LUG=["la puerta principal","el pasillo","las ventanas","el parqueo","la oficina de la jefa","la bodega","la cafetera","los escritorios","las cámaras","la entrada trasera","el elevador","la recepción","el cuarto de servidores","la azotea","el dispensador de agua"];
+const COMP=["José Joel","Óscar","Erik","Dari","Amílcar"];
+const COSAS=["está trabajando duro 💪","ya se tomó su café ☕","anda bien concentrado 🧐","va por buen camino 👍","se ve contento hoy 😄","no ha parado de teclear ⌨️","está buscando noticias nuevas 🔎","anda con buena energía ⚡","me saludó en la entrada 👋","tiene todo ordenado 🗂️","dice que hoy es un gran día 🌞","pasó revisando sus notas 📝"];
+const TIPS=["Consejo: nunca compartas tu contraseña 🔐","Consejo: activa la verificación en dos pasos 📱","Si un mensaje pide dinero urgente, desconfía 🚩","Revisa la fuente antes de compartir una noticia 📰","No abras enlaces raros en WhatsApp ⚠️","Bloquea tu compu cuando te levantes 💻","Usa contraseñas largas, como una frase 🔑","Actualiza tu celular: trae parches de seguridad 📲","En el bus, cuida tu celular 🚌","No publiques tu ubicación en tiempo real 📍","Si te llaman del 'banco' pidiendo códigos, cuelga 📵","Haz respaldo de tus archivos importantes 💾","Wifi público = cuidado con tus datos 📶","Tapa la cámara si no la usas 📷","Nunca dejes la mochila sola 🎒","De noche, camina por calles iluminadas 🌙","Número de emergencia: 911 ☎️","Revisa los permisos de tus apps 📱","Las ofertas demasiado buenas suelen ser estafa 🎣","No prestes tu identidad para trámites raros 🪪","Si algo te da mala espina, pregunta primero 🤔","No compartas fotos de tus documentos 🧾","Cierra sesión en compus prestadas 🖥️","Un captura de pantalla también puede ser falsa 🕵️","Desconfía de cadenas que dicen 'compártelo ya' 🔗","Revisa la fecha de la noticia antes de creerla 📅","Si es demasiado escandaloso, verifícalo dos veces 🔍","Guarda tus contraseñas en un gestor seguro 🗝️","Ojo con los códigos QR desconocidos 🔳","Avisa a alguien cuando salgas tarde 📲"];
+const FUN=["Dicen que soy alto… yo digo que la puerta es baja 😎","Un guardia nunca duerme… solo parpadea lento 😴","Mi superpoder: ver rumores desde lejos 🦸","¿Quién se comió mi baleada? 🧐","Hoy ya hice 10,000 pasos de ronda 🚶","Amílcar corre más que yo, pero yo llego seguro 🐢","Erik me debe una baleada 🌯","Si se acaba el café, es emergencia nivel 5 ☕🚨","Mi linterna y yo somos inseparables 🔦","Dari dice que la noche es suya… es de los dos 🌙","Ni las moscas entran sin gafete 🪰","Este uniforme me queda pintado 😎","Hoy amanecí con ganas de cuidar 💪","Con la jefa al mando, todo sale bien 👑","Yo no corro, yo patrullo con estilo 🕺","Mi café favorito: el de Amílcar ☕","La seguridad es lo primero… y la baleada lo segundo 🌯","Si ve algo raro, me avisa a mí 👮","Esta oficina es la mejor de Honduras 🇭🇳","Mis botas ya conocen cada baldosa 👢","Puerta revisada, corazón tranquilo ❤️","Un día sin rumores es un buen día 🌞","Aquí se trabaja con verdad ✔️","Le cuido hasta la planta, jefa 🪴","El reloj marca… hora de seguir vigilando ⏰","Óscar me trajo noticias del mundo 🌎","José Joel es chaparro pero rapidísimo ⚡","Ya conté las sillas: todas en su lugar 🪑","Nadie pasa sin saludar 👋","Si llueve, igual hago la ronda ☔","Soy el más alto, por eso veo todo 👀","La puerta y yo tenemos una relación seria 🚪","Mi lema: ojo abierto, corazón noble 💙","Uno no es guardia, uno nace guardia 🛡️","Hoy vi un gato en el parqueo… también lo vigilé 🐈","¿Alguien vio mi gorra? Ah, la tengo puesta 🧢","Un buen guardia saluda a todos 🙋","La cafetera también está bajo protección ☕","Aquí todo bien, como siempre 👍","Cuento con ustedes, y ustedes conmigo 🤝"];
+const REP=["sin novedad","todo en orden","puerta cerrada","ventanas aseguradas","cero intrusos","todo limpio","cámaras grabando","luces revisadas","pasillo despejado","parqueo tranquilo","alarma activa","bodega con llave","nada raro","oficina impecable","perímetro seguro","todo bajo control","calma total","reportes al día","ruta completada","misión cumplida"];
+const CLIMA=["está soleado","hace calor","está fresco","está nublado","sopla brisita","está lloviznando","está bonito","hay mucho tráfico"];
+const DENTRO=["todo tranquilo","todos trabajando","huele a café","hay buena vibra","el aire está rico","nadie se queja","la paz reina","todo seguro"];
+const recent=[];
+function selvinLine(){
+  let t, w=isOpen();
+  for(let i=0;i<20;i++){
+    const r=Math.random();
+    if(r<.18) t=`${pick(SAL)}, ${pick(EST)} 👮`;
+    else if(r<.38) t=`${pick(SAL)}: ${pick(ACC).toLowerCase()} ${pick(LUG)} 🔎`;
+    else if(r<.5) t=`${pick(ACC)} ${pick(LUG)}${w?'…':' 🔦'}`;
+    else if(r<.6 && w) t=`${pick(COMP)} ${pick(COSAS)}`;
+    else if(r<.72) t=pick(TIPS);
+    else if(r<.86) t=pick(FUN);
+    else if(r<.94) t=`Ronda de las ${clockStr()}: ${pick(REP)} ✅`;
+    else t=`Afuera ${pick(CLIMA)}, adentro ${pick(DENTRO)}`;
+    if(!recent.includes(t)) break;
+  }
+  recent.push(t); if(recent.length>80) recent.shift(); return t;
+}
+
+// =====================================================================
+//  MENÚ DE ÓRDENES (interacción con la jefa)
+// =====================================================================
+const modal=document.getElementById('modal');
+function nice(k){ const n=DEF[k].name; return n.split(' ')[0].toLowerCase().replace(/^./,c=>c.toUpperCase()).replace('Jose','José').replace('Oscar','Óscar').replace('Amilcar','Amílcar'); }
+function openMenu(k){
+  const d=DEF[k], a=actors[k];
+  document.getElementById('mName').textContent= k==='jefa' ? (jefaName()||'Sofía')+' 👑' : d.name;
+  document.getElementById('mRole').textContent=d.role;
+  const body=document.getElementById('mBody'), acts=document.getElementById('mActs');
+  body.innerHTML='<ul>'+d.tasks.map(t=>`<li>${t}</li>`).join('')+'</ul>'; acts.innerHTML='';
+  const add=(label,fn)=>{ const b=document.createElement('button'); b.className='act'; b.textContent=label; b.onclick=()=>{ modal.classList.remove('show'); fn(); }; acts.appendChild(b); };
+  if(k==='jefa'){
+    if(a.present){
+      add("📋 Llamar a reunión de equipo",()=>meeting());
+      add("☕ Pedirle un café a Amílcar",()=>amilcarCoffee());
+      add("🌯 Baleadas para todos",()=>amilcarBaleadas(true));
+      add("🎉 Darle ánimo al equipo",async()=>{ a.say("¡Equipo, son los mejores! 🎉",3000); await sleep(1200); [...WORKERS,'amilcar','selvin'].forEach((x,i)=>setTimeout(()=>{ if(actors[x].present) actors[x].say(pick(["¡Gracias, jefa! 🥹","¡Usted también! 💜","¡Vamos con todo! 💪"]),2600); },i*300)); });
+    } else body.innerHTML+='<p class="muted">Ahorita estás fuera de la oficina (horario de 7:00 am a 4:00 pm).</p>';
+    add("✏️ Cambiar mi nombre",()=>nameDialog());
+  } else if(!a.present){
+    body.innerHTML+=`<p class="muted">${nice(k)} ya se fue a casa 🏠. El horario es de 7:00 am a 4:00 pm.</p>`;
+    add("▶ Ver un día simulado",()=>startSim());
+  } else if(k==='selvin'){
+    add("🗣️ ¿Qué novedades hay?",()=>a.say(selvinLine(),4500));
+    add("📞 Llamarlo a mi oficina",()=>selvinVisit());
+    add("🔐 Dame un consejo de seguridad",()=>a.say(pick(TIPS),4500));
+  } else if(k==='amilcar'){
+    add("☕ Tráigame un café",()=>amilcarCoffee());
+    add("🌯 Traiga baleadas para todos",()=>amilcarBaleadas(true));
+    add("🏦 Vaya al banco",()=>amilcarBank());
+  } else {
+    add("📞 Llamarlo a mi oficina",()=>{ if(free(k)) reportToBoss(a,"¿Me llamó, jefa? 🙋 "+a.d.report()); else a.say("¡Ya voy, jefa! Termino algo 🏃",2500); });
+    add("☕ Que Amílcar le lleve un café",()=>amilcarCoffee(a));
+    add("👏 Felicitarlo",async()=>{ actors.jefa.say(`¡Excelente trabajo, ${nice(k)}! 👏`,3000); await sleep(1300); a.say("¡Gracias, jefa! 🥹",2600); });
+    add("💬 ¿Qué estás haciendo?",()=>a.say(pick(a.d.msgs),3500));
+  }
+  modal.classList.add('show');
+}
+document.getElementById('close').onclick=()=>modal.classList.remove('show');
+modal.onclick=e=>{ if(e.target===modal) modal.classList.remove('show'); };
+function jefaName(){ try{ return localStorage.getItem('jefaNombre')||'Sofía'; }catch(e){ return 'Sofía'; } }
+function applyName(){ const n=jefaName()||'Sofía'; actors.jefa.tag.textContent=n.toUpperCase(); document.getElementById('plate').textContent='👑 '+n.toUpperCase(); document.getElementById('bsign').textContent='👑 OFICINA DE '+n.toUpperCase(); }
+function nameDialog(){
+  document.getElementById('mName').textContent='✏️ Tu nombre'; document.getElementById('mRole').textContent='Así te verá el equipo';
+  document.getElementById('mBody').innerHTML=`<input id="nameIn" maxlength="18" placeholder="Escribe tu nombre" value="${jefaName().replace(/"/g,'')}">`;
+  const acts=document.getElementById('mActs'); acts.innerHTML='';
+  const b=document.createElement('button'); b.className='act'; b.textContent='💾 Guardar';
+  b.onclick=()=>{ const v=document.getElementById('nameIn').value.trim()||'Sofía'; try{ localStorage.setItem('jefaNombre',v); }catch(e){} applyName(); modal.classList.remove('show'); if(actors.jefa.present) actors.selvin.say(`¡A sus órdenes, jefa ${v}! 👮`,3000); };
+  acts.appendChild(b); modal.classList.add('show');
+}
+
+// =====================================================================
+//  ARRANQUE Y CICLO DEL DÍA
+// =====================================================================
+WORKERS.forEach(k=>addDesk(k,DEF[k])); addBossDesk();
+['jefa',...WORKERS,'amilcar','selvin'].forEach(makeActor);
+applyName();
+let wasOpen=isOpen(), lastMin=null;
+['jefa',...WORKERS,'amilcar'].forEach(k=>setInstant(actors[k],wasOpen));
+actors.selvin.present=true; actors.selvin.show(true); actors.selvin.x=300; actors.selvin.y=GUARD_Y;
+requestAnimationFrame(step);
+
+function updateScene(){
+  const {h,m}=clockHM(), night=isNight(), work=isWork();
+  document.getElementById('time').textContent=clockStr(true);
+  document.getElementById('hh').style.transform=`translateX(-50%) rotate(${(h%12)*30+m/2}deg)`;
+  document.getElementById('mh').style.transform=`translateX(-50%) rotate(${m*6}deg)`;
+  document.getElementById('status').textContent = (sim!==null?'SIM · ':'') + (isLunch()?'Almuerzo':(work?'En horario':'Cerrado'));
+  stage.classList.toggle('night',night); sun(night);
+  document.getElementById('closed').classList.toggle('show', !isOpen() && !Object.values(actors).some(a=>a.present&&!a.d.guard));
+  const open=isOpen(), cur=nowMin();
+  if(open!==wasOpen){
+    wasOpen=open;
+    if(open){
+      const back = clockHM().h>=13;
+      actors.selvin.say(back?"¡Bienvenidos de vuelta! 👮":"¡Buenos días! Oficina abierta 🔓",3500);
+      const hi=k=> back ? pick(["¡Ya volvimos! 😋","¡Qué rico almuerzo! 🍽️","¡De vuelta al trabajo! 💪"]) : null;
+      if(!actors.jefa.present) arrive(actors.jefa, back?"¡A seguir, equipo! 💜":null);
+      ['amilcar',...WORKERS].forEach((k,i)=>setTimeout(()=>{ if(isOpen() && !actors[k].present) arrive(actors[k],hi(k)); },1500+i*1300+Math.random()*800));
+    } else {
+      const lunch=isLunch();
+      actors.selvin.say(lunch?"¡Buen provecho! Yo cuido la oficina 👮":"Hasta mañana a todos. Yo cuido la oficina 🔦",4000);
+      const bye=()=> lunch ? pick(["¡A almorzar! 🍽️","¡Hora de la comida! 😋","¡Vamos por baleadas! 🌯"]) : null;
+      [...WORKERS,'amilcar'].forEach((k,i)=>setTimeout(()=>{ if(actors[k].present) leave(actors[k],bye()); },i*1100));
+      setTimeout(()=>{ if(actors.jefa.present) leave(actors.jefa, lunch?"¡Buen provecho, equipo! 🍽️":null); },6500);
+    }
+  }
+  if(lastMin!==null && lastMin!==cur && isOpen()){ AGENDA.forEach(e=>{ if(e.fn && crossed(lastMin,cur,e.t)) e.fn(); }); }
+  lastMin=cur;
+  renderAgenda(cur);
+  const cl=document.getElementById('closed');
+  if(isLunch()) cl.innerHTML=`🍽️ EL EQUIPO SALIÓ A ALMORZAR<br>Regresan a la 1:00 pm (en ${fmtDur(13*60-cur)})<br>Selvin cuida la oficina 👮`;
+  else if(!isWork()) cl.innerHTML=`🔒 OFICINA CERRADA<br>Horario: 7:00 am a 4:00 pm<br>Abrimos en ${fmtDur((7*60-cur+1440)%1440)} ⏰<br>Selvin cuida la oficina 🔦<br><br>¿No quieres esperar? Toca "▶ SIMULAR UN DÍA".`;
+}
+setInterval(()=>{ if(sim!==null){ sim+=2; if(sim>=16*60+25) stopSim(); } updateScene(); },300);
+updateScene();
+
+// eventos al azar, charla en el escritorio, rondas
+(function loop(){ randomEvent(); setTimeout(loop, 6500+Math.random()*5000); })();
+setInterval(()=>{ if(!isOpen()) return; const k=pick(WORKERS); const a=actors[k]; if(a.present&&a.seated&&!a.busy) a.say(pick(a.d.msgs),2600); },3600);
+setInterval(()=>{ const s=actors.selvin; s.say(selvinLine(),4200); },4600);
+setInterval(()=>{
+  const s=actors.selvin; if(!s.busy && !s.path.length){ s.go([[60+Math.random()*900,GUARD_Y]]); s.el.querySelector('.beam').style.transform=''; }
+  const a=actors.amilcar; if(a.present && !a.busy && !a.path.length) a.go([[90+Math.random()*560,RUN_Y]]);
+},1200);
+
+// simulación de un día completo
+const simBtn=document.getElementById('simBtn');
+function startSim(){ sim=6*60+57; simBtn.textContent='■ DETENER SIMULACIÓN'; simBtn.classList.add('on'); updateScene(); }
+function stopSim(){ sim=null; simBtn.textContent='▶ SIMULAR UN DÍA'; simBtn.classList.remove('on'); updateScene(); }
+simBtn.onclick=()=> sim===null ? startSim() : stopSim();
+
+// nombre de empresa
+const cname=document.getElementById('cname'), sign=document.getElementById('sign');
+try{ const sv=localStorage.getItem('empresa'); if(sv) cname.textContent=sv; }catch(e){}
+sign.textContent=cname.textContent; document.title=cname.textContent;
+cname.addEventListener('input',()=>{ sign.textContent=cname.textContent||'Mi Empresa'; document.title=sign.textContent; try{localStorage.setItem('empresa',cname.textContent)}catch(e){} });
+cname.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();cname.blur();} });
+
+// flujo
+const steps=[...document.querySelectorAll('.step')]; let sIdx=0;
+setInterval(()=>{steps.forEach(x=>x.classList.remove('on')); steps[sIdx].classList.add('on'); sIdx=(sIdx+1)%steps.length;},1400);
+
+// ---------- noticias en formato historias ----------
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => /^https?:\/\//i.test(u||'') ? esc(u) : '#';
+document.getElementById('pDate').textContent = N.fecha;
+
+let readSet = new Set(); try{ readSet = new Set(JSON.parse(localStorage.getItem('leidas:'+N.fecha)||'[]')); }catch(e){}
+function saveRead(){ try{ localStorage.setItem('leidas:'+N.fecha, JSON.stringify([...readSet])); }catch(e){} }
+function updRead(){
+  const total=N.noticias.length, k=[...readSet].filter(i=>i<total).length;
+  document.getElementById('readCount').textContent=`${k}/${total}`;
+  document.getElementById('readBar').style.width=(total?k/total*100:0)+'%';
+}
+const tone = n => n.cat==='Economía' ? 't-eco' : n.cat==='Seguridad' ? 't-seg' : n.seccion==='honduras' ? 't-hn' : 't-int';
+const toneColor = {'t-eco':'#F0C23B','t-seg':'#C93A47','t-hn':'#0B7F86','t-int':'#4C4FD1'};
+const secName = s => s==='honduras' ? 'Honduras' : 'Mundo';
+
+let filtro='todo', slides=[], pos=0, vista='story';
+let qi=0, score=0, answered=false;
+
+function buildSlides(){
+  const news = N.noticias.map((n,i)=>({...n,i})).filter(n=> filtro==='todo' || n.seccion===filtro || n.cat===filtro);
+  slides = [{kind:'intro'}, ...news.map(n=>({kind:'news',n})), {kind:'dato'}, {kind:'quiz'}];
+  if(!news.length) slides.splice(1,0,{kind:'empty'});
+}
+function slideHTML(s){
+  if(s.kind==='intro') return {cls:'', html:`
+    <h3 class="n2-h">Lo de hoy en 30 segundos</h3>
+    <ol class="n2-quick">${N.rapido.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
+    <p class="n2-hint" style="margin-top:auto">Toca la flecha o desliza para pasar a la siguiente.</p>`};
+  if(s.kind==='empty') return {cls:'', html:`<p class="n2-empty">No hay noticias en este filtro hoy. Prueba con "Todo".</p>`};
+  if(s.kind==='news'){ const n=s.n, t=tone(n), read=readSet.has(n.i), solo=!n.resumen&&!n.importa; return {cls:t+(solo?' solo':''), html:`
+    <div class="n2-tags"><span>${secName(n.seccion)}</span><span>${esc(n.cat)}</span></div>
+    <h3 class="n2-h">${esc(n.titulo)}</h3>
+    ${n.resumen?`<p class="n2-p">${esc(n.resumen)}</p>`:''}
+    ${solo?`<p class="n2-p" style="opacity:.8">Abre la nota en ${esc(n.fuente)} para leerla completa.</p>`:''}
+    ${n.importa?`<p class="n2-why"><b>Por qué importa</b>${esc(n.importa)}</p>`:''}
+    <div class="n2-foot">
+      <span class="n2-by"><span class="n2-av" aria-hidden="true">${esc((n.por||'?').trim()[0])}</span>Por ${esc(n.por)}</span>
+      <a class="n2-src" href="${safeUrl(n.url)}" target="_blank" rel="noopener">Leer en ${esc(n.fuente)} ↗</a>
+    </div>`, read}; }
+  if(s.kind==='dato') return {cls:'t-eco', html:`
+    <div class="n2-tags"><span>Dato útil del día</span><span>Por Erik</span></div>
+    <p class="n2-big">${esc(N.dato.valor)}</p>
+    <p class="n2-p">${esc(N.dato.nota)}</p>
+    <div class="n2-foot"><span></span><a class="n2-src" href="${safeUrl(N.dato.url)}" target="_blank" rel="noopener">Ver la fuente ↗</a></div>`};
+  if(s.kind==='quiz'){ const q=N.quiz[qi]; answered=false; return {cls:'t-quiz', html:`
+    <div class="n2-tags"><span>¿Te enteraste?</span><span>Pregunta ${qi+1} de ${N.quiz.length}</span></div>
+    <h3 class="n2-h" style="font-size:clamp(24px,4vw,34px)">${esc(q.q)}</h3>
+    <div class="n2-opts" id="qOpts">${q.ops.map((o,j)=>`<button type="button" data-j="${j}">${esc(o)}</button>`).join('')}</div>
+    <p class="n2-p" id="qFeed" aria-live="polite"></p>
+    <div class="n2-foot"><span id="qScore">Puntos: ${score} de ${N.quiz.length}</span><button type="button" class="n2-btn" id="qNext" hidden></button></div>`}; }
+}
+function show(dir=1){
+  const card=document.getElementById('card'), s=slides[pos], r=slideHTML(s);
+  card.className='n2-card '+r.cls; card.innerHTML=r.html;
+  card.style.setProperty('--dx', (dir*24)+'px'); void card.offsetWidth; card.classList.add('enter');
+  if(s.kind==='news' && !readSet.has(s.n.i)){ readSet.add(s.n.i); saveRead(); updRead(); }
+  document.getElementById('bars').innerHTML = slides.map((_,k)=>`<i class="${k<=pos?'done':''}"></i>`).join('');
+  document.getElementById('prev').disabled = pos===0;
+  document.getElementById('next').disabled = pos===slides.length-1;
+  const nNews = slides.filter(x=>x.kind==='news').length;
+  document.getElementById('count').textContent = s.kind==='news' ? `Noticia ${slides.slice(0,pos+1).filter(x=>x.kind==='news').length} de ${nNews}` : '';
+}
+function go(d){ const p=pos+d; if(p<0||p>=slides.length) return; pos=p; show(d); }
+document.getElementById('prev').onclick=()=>go(-1);
+document.getElementById('next').onclick=()=>go(1);
+document.getElementById('card').addEventListener('keydown',e=>{ if(e.key==='ArrowRight'){go(1);e.preventDefault();} if(e.key==='ArrowLeft'){go(-1);e.preventDefault();} });
+let tx=null;
+document.getElementById('storyView').addEventListener('touchstart',e=>{tx=e.touches[0].clientX},{passive:true});
+document.getElementById('storyView').addEventListener('touchend',e=>{ if(tx===null) return; const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>50) go(dx<0?1:-1); tx=null; });
+
+// quiz dentro de la historia
+document.getElementById('card').addEventListener('click',e=>{
+  const b=e.target.closest('#qOpts button');
+  if(b && !answered){ answered=true;
+    const q=N.quiz[qi], j=+b.dataset.j;
+    document.querySelectorAll('#qOpts button').forEach((x,k)=>{ x.disabled=true; if(k===q.ok) x.classList.add('ok'); });
+    if(j===q.ok){ score++; document.getElementById('qFeed').textContent='¡Correcto! '+q.exp; }
+    else { b.classList.add('bad'); document.getElementById('qFeed').textContent='Casi. '+q.exp; }
+    document.getElementById('qScore').textContent=`Puntos: ${score} de ${N.quiz.length}`;
+    const nb=document.getElementById('qNext'); nb.hidden=false;
+    nb.textContent = qi<N.quiz.length-1 ? 'Siguiente pregunta' : 'Jugar otra vez';
+    return;
+  }
+  if(e.target.id==='qNext'){ if(qi<N.quiz.length-1){qi++;} else {qi=0;score=0;} show(0); }
+});
+
+// vista de lista
+function renderList(){
+  const list = N.noticias.map((n,i)=>({...n,i})).filter(n=> filtro==='todo' || n.seccion===filtro || n.cat===filtro);
+  const el=document.getElementById('listView');
+  el.innerHTML = list.length ? list.map(n=>`
+    <article class="n2-row ${readSet.has(n.i)?'read':''}" style="--c:${toneColor[tone(n)]}">
+      <span class="stripe"></span>
+      <div><div class="meta">${secName(n.seccion)}, ${esc(n.cat.toLowerCase())}. Por ${esc(n.por)}</div>
+        <h3>${esc(n.titulo)}</h3>${n.resumen?`<p>${esc(n.resumen)}</p>`:''}${n.importa?`<p style="margin-top:6px"><b>Por qué importa:</b> ${esc(n.importa)}</p>`:''}</div>
+      <div class="n2-act"><a href="${safeUrl(n.url)}" target="_blank" rel="noopener">${esc(n.fuente)} ↗</a>
+        <button type="button" class="n2-ghost" data-r="${n.i}">${readSet.has(n.i)?'Leída':'Marcar leída'}</button></div>
+    </article>`).join('') : '<p>No hay noticias en este filtro hoy.</p>';
+}
+document.getElementById('listView').addEventListener('click',e=>{
+  const b=e.target.closest('[data-r]'); if(!b) return;
+  const i=+b.dataset.r; readSet.has(i)?readSet.delete(i):readSet.add(i); saveRead(); updRead(); renderList();
+});
+
+function refresh(){ buildSlides(); if(vista==='story'){ pos=Math.min(pos,slides.length-1); show(0); } else renderList(); }
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  filtro=b.dataset.f; pos= filtro==='todo'?0:1; refresh();
+});
+document.querySelector('.n2-switch').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return; vista=b.dataset.v;
+  document.querySelectorAll('.n2-switch button').forEach(x=>x.setAttribute('aria-pressed', x===b?'true':'false'));
+  document.getElementById('storyView').hidden = vista!=='story';
+  document.getElementById('listView').hidden = vista!=='list';
+  refresh();
+});
+updRead(); refresh();
+
+</script>
+</body>
+</html>
