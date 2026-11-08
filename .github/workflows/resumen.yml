@@ -1,0 +1,32 @@
+name: Actualizar noticias
+
+on:
+  schedule:
+    # 12:05 UTC = 6:05 a. m. en Honduras (GitHub usa hora UTC)
+    - cron: "5 12 * * *"
+  workflow_dispatch: {}   # botón "Run workflow" para actualizar cuando quieras
+
+permissions:
+  contents: write   # solo para guardar la página actualizada
+
+concurrency:
+  group: noticias
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Buscar noticias y actualizar la página
+        run: python bot.py
+      - name: Guardar la página
+        run: |
+          git config user.name "Amilcar (bot)"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Noticias del $(date -u +%Y-%m-%d)"
+          git push
